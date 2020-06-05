@@ -9,7 +9,7 @@ import {
 //Определяем тип команды, на всякий случай
 interface commandType {
 	name: string;
-	execute: Function;
+	run: Function;
 }
 
 //Наследуем класс добавляя ебучий commands
@@ -47,7 +47,7 @@ for (const file of eventFiles) {
     client.events.push('.' + file.replace('.ts', ''))
 }
 
-client.on('ready', () =>{
+client.once('ready', () =>{
     console.log('Jill готова к работе!')
 })
 

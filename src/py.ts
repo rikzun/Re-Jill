@@ -1,4 +1,4 @@
-export {print, randint, wordTransfer}
+export {print, randint, wordTransfer, has}
 
 function print(...data: any[]) {
     data.forEach((val, key, map) =>
@@ -28,4 +28,8 @@ function wordTransfer(obj) {
         i++
     })
     return rt
+}
+
+function has(obj: any, key: string): boolean {
+    return Object.prototype.hasOwnProperty.call(obj, key);
 }

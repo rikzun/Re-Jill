@@ -6,7 +6,7 @@ import {wordTransfer} from '../py'
 
 module.exports = {
     name: 'module',
-    execute(message: Message, args: string[]) {
+    run: async (message: Message, args: string[]) => {
         if (message.author.id = client.owner) {
             switch (args[1]) {
 
