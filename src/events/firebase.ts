@@ -8,10 +8,36 @@ firebase.initializeApp({
 });
 
 export const database = firebase.database().ref()
-export let data = {
-    webhooks: {},
-    bans: []
+
+class Data {
+    webhooks: {
+        channel: string;
+        id: string;
+        token: string;
+    };
+    bans: string[];
+    guildbans: string[];
+    messages: object;
+    moderators: string[];
+    queue: {
+        create: string;
+        channel: string;
+        id: string;
+        token: string;
+    };
+
+    constructor(fullData: object) {
+        this.webhooks = fullData['webhooks']
+        this.messages = fullData['nmessages']
+        this.bans = fullData['bans']
+        this.queue = fullData['nqueue'] || {}
+        this.guildbans = fullData['guildbans'] || []
+        this.moderators = Object.values(fullData['moderators'])
+    }
 }
 
-database.child('/webhooks').once('value').then(v => {data.webhooks = v.val()})
-database.child('/bans').once('value').then(v => {data.bans = v.val()})
+export let data: Data
+(async () => {
+    const fullData = await database.child('/').once('value')
+    data = new Data(await fullData.val())
+})();

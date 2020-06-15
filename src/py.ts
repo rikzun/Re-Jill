@@ -1,4 +1,4 @@
-export {print, randint, wordTransfer, has}
+export {print, randint, wordTransfer, get, arrayDelValue, range}
 
 function print(...data: any[]) {
     data.forEach((val, key, map) =>
@@ -30,6 +30,17 @@ function wordTransfer(obj) {
     return rt
 }
 
-function has(obj: any, key: string): boolean {
-    return Object.prototype.hasOwnProperty.call(obj, key);
+function get(dict: object, key: string, rt:any = {}) {
+    return dict?.[key] ?? rt
+}
+
+function arrayDelValue(array: Array<any>, value: string) {
+    const index = array.indexOf(value)
+    array.splice(index, 1)
+    return array
+}
+
+function range(min: number, max: number) {
+    return Array.apply(0, Array(max))
+        .map((element, index) => index + min);
 }

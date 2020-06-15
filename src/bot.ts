@@ -31,14 +31,6 @@ client.events = new Array()
 client.unloadedEvents = new Array()
 client.owner = '532935768918982656'
 
-
-//Обработчик команд
-const commandFiles = fs.readdirSync(__dirname + '/commands').filter(file => file.endsWith('.ts'));
-for (const file of commandFiles) {
-    const command = require(`./commands/${file}`)
-    client.commands.set(command.name, command)
-}
-
 //Обработчик ивентов
 const eventFiles = fs.readdirSync(__dirname + '/events').filter(file => file.endsWith('.ts'));
 for (const file of eventFiles) {
@@ -47,7 +39,14 @@ for (const file of eventFiles) {
     client.events.push('.' + file.replace('.ts', ''))
 }
 
-client.once('ready', () =>{
+//Обработчик команд
+const commandFiles = fs.readdirSync(__dirname + '/commands').filter(file => file.endsWith('.ts'));
+for (const file of commandFiles) {
+    const command = require(`./commands/${file}`)
+    client.commands.set(command.name, command)
+}
+
+client.once('ready', () => {
     console.log('Jill готова к работе!')
 })
 

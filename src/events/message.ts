@@ -5,9 +5,10 @@ import {
 } from '../bot'
 
 client.on('message', async (message: Message) => {
+    if (!message.guild) return;
+
     let args = message.content.substring(prefix.length).split(' ')
-    const cmd = client.commands
-    if (cmd.has(args[0].toLowerCase())) {
-        cmd.get(args[0].toLowerCase()).run(message, args)
+    if (client.commands.has(args[0].toLowerCase())) {
+        client.commands.get(args[0].toLowerCase()).run(message, args)
     }
 })
