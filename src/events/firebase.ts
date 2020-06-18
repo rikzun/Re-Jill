@@ -29,7 +29,7 @@ class Data {
     constructor(fullData: object) {
         this.webhooks = fullData['webhooks']
         this.messages = fullData['nmessages']
-        this.bans = fullData['bans']
+        this.bans = fullData['bans'] || []
         this.queue = fullData['nqueue'] || {}
         this.guildbans = fullData['guildbans'] || []
         this.moderators = Object.values(fullData['moderators'])

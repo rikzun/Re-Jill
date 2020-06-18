@@ -6,16 +6,27 @@ import {client} from '../bot'
 client.on('message', async (message: Message) => {
     if (message.guild) {
         if ( get(get(data.webhooks, message.guild.id), 'channel') == message.channel.id ) {
-            if (message.author.id == '608154725338185738') message.author.bot = false;
+            if (message.author.id == client.user.id && message.embeds) return;
+            if (message.author.id == client.user.id) message.author.bot = false;
             if (message.author.bot || message.webhookID) return;
             if (data.bans.includes(message.author.id)) return;
             if (message.content.startsWith('./') || message.content.startsWith('!')) return;
             if (message.content.includes('discord.gg')) {
                 data.bans.push(message.author.id)
-                database.child(`/bans`).update(message.author.id)
+                database.child(`/bans`).update({[data.bans.length]: message.author.id})
                 const channel = client.channels.cache.find(c => c.id == '693480909269368933') as TextChannel
-                channel.send(`\`\`\`md\n[${message.author.id}](${message.author.username})\nСсылка приглашение\`\`\``)
-                return}
+
+                const msg = new MessageEmbed()
+                    .setThumbnail(message.author.avatarURL({format: "png", size: 512}))
+                    .addFields(
+                        {name: 'Banned', 
+                        value: `Name: ${message.author.username}\nID: ${message.author.id}`},
+                        {name: 'Ban issued', 
+                        value: `Name: ${client.user.username}\nID: ${client.user.id}\nReason: discord.gg trigger`}
+                    )
+                channel.send(msg)
+                return
+            }
             
             let attachments: string[] = new Array()
             message.attachments.forEach(v => {
@@ -59,6 +70,40 @@ client.on('message', async (message: Message) => {
             }
             data.messages[message.id] = {...messageIds}
             database.child(`/nmessages/${message.id}`).update(messageIds)
+        }
+    }
+})
+client.on('messageDelete', async (message: Message) => {
+    if ( get(data.messages, message.id, false) ) {
+        if (data.bans.includes(message.author.id)) return;
+        if (message.content.includes('discord.gg')) {
+            data.bans.push(message.author.id)
+            database.child(`/bans`).update({[data.bans.length]: message.author.id})
+            const channel = client.channels.cache.find(c => c.id == '693480909269368933') as TextChannel
+    
+            const msg = new MessageEmbed()
+                .setThumbnail(message.author.avatarURL({format: "png", size: 512}))
+                .addFields(
+                    {name: 'Banned', 
+                    value: `Name: ${message.author.username}\nID: ${message.author.id}`},
+                    {name: 'Ban issued', 
+                    value: `Name: ${client.user.username}\nID: ${client.user.id}\nReason: discord.gg trigger`}
+                )
+            channel.send(msg)
+            return
+        }
+
+        //Удаление сообщений на всех серверах
+        for (let ch in data.messages[message.id]) {
+            if (data.messages[message.id][ch] == message.id) continue;
+
+            const channel = client.channels.cache.find(c => c.id == ch) as TextChannel
+            const msg = channel.messages.cache.find(m => m.id == data.messages[message.id][ch])
+            try {
+                msg.delete()
+            } catch (error) {
+                continue
+            }
         }
     }
 })

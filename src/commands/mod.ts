@@ -9,36 +9,51 @@ module.exports = {
         if (data.moderators.includes(message.author.id)) {
             switch (args[1]) {
                 case 'message':
-                    try {
-                        const messages = data.messages[args[2]]
+                    const messages = data.messages[args[2]]
 
-                        //Если id сообщения не найден
-                        if (!messages) throw {code: '10008'};
-                        
-                        //Удаление сообщений на всех серверах
-                        for (let ch in messages) {
-                            const channel = client.channels.cache.find(c => c.id == ch) as TextChannel
-                            const message = await channel.messages.fetch(messages[ch]);
+                    //Если id сообщения не найден
+                    if (!messages) throw {code: '10008'};
+                    
+                    //Удаление сообщений на всех серверах
+                    for (let ch in messages) {
+                        const channel = client.channels.cache.find(c => c.id == ch) as TextChannel
+                        const message = await channel.messages.fetch(messages[ch]);
+                        try {
                             await (message.delete())
+                        } catch (error) {
+                            switch (error['code']) {
+                                case '10008':
+                                    message.react('🔎')
+                                    break;
+                            }
                         }
                         
-                        delete data.messages[args[2]]
-                        database.child(`/nmessages/${args[2]}`).remove()
-                        message.react('✅')
-                    } catch (error) {
-                        switch (error['code']) {
-                            case '10008':
-                                message.react('🔎')
-                                break;
-                        }
                     }
+                    
+                    delete data.messages[args[2]]
+                    database.child(`/nmessages/${args[2]}`).remove()
+                    message.react('✅')
                     break;
                 
                 case 'user':
                     switch (args[2]) {
                         case 'ban':
+                            const user = client.users.cache.find(u => u.id == args[3])
+                            
                             data.bans.push(args[3])
                             database.child(`/bans`).update({[data.bans.length]: args[3]})
+
+                            const reason = args.slice(4).join(' ')
+                            const banChannel = client.users.cache.find(u => u.id == '693480909269368933')
+                            const msg = new MessageEmbed()
+                                .setThumbnail(user.avatarURL({format: "png", size: 512}))
+                                .addFields(
+                                    {name: 'Banned', 
+                                    value: `Name: ${user.username}\nID: ${user.id}`},
+                                    {name: 'Ban issued', 
+                                    value: `Name: ${message.author.username}\nID: ${message.author.id}\nReason: ${reason}`}
+                                )
+                            banChannel.send(msg)
                             message.react('✅')
                             break;
                     
@@ -90,6 +105,19 @@ module.exports = {
                                     webhook.delete('Вы забанены.')
 
                                 } catch (error) {}
+
+                                const guild = client.guilds.cache.find(c => c.id == args[3])
+                                const reason = args.slice(4).join(' ')
+                                const banChannel = client.users.cache.find(u => u.id == '693480909269368933')
+                                const msg = new MessageEmbed()
+                                    .setThumbnail(guild.iconURL({format: "png", size: 512}))
+                                    .addFields(
+                                        {name: 'Banned', 
+                                        value: `Name: ${guild.name}\nID: ${guild.id}`},
+                                        {name: 'Ban issued', 
+                                        value: `Name: ${message.author.username}\nID: ${message.author.id}\nReason: ${reason}`}
+                                    )
+                                banChannel.send(msg)
 
                                 delete data.webhooks[args[3]]
                                 database.child(`/webhooks/${args[3]}`).remove()

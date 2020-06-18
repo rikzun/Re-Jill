@@ -14,7 +14,7 @@ import { get, print } from '../py';
             }
         }
 
-        if ( Object.keys(get(data, 'messages')).length >= 50 ) {
+        if ( Object.keys(get(data, 'messages')).length > 50 ) {
             let count = Object.keys(data.messages).length
             while (count > 50) {
                 const idmsg = Object.keys(data.messages)[0]

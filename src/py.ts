@@ -1,4 +1,8 @@
-export {print, randint, wordTransfer, get, arrayDelValue, range}
+import { Message } from "discord.js"
+export {
+    print, randint, wordTransfer, 
+    get, arrayDelValue, range, mth, 
+    }
 
 function print(...data: any[]) {
     data.forEach((val, key, map) =>
@@ -43,4 +47,15 @@ function arrayDelValue(array: Array<any>, value: string) {
 function range(min: number, max: number) {
     return Array.apply(0, Array(max))
         .map((element, index) => index + min);
+}
+
+function mth(a: number, operator: string, b: number): number {
+    if (!a || !operator || !b) return undefined;
+    switch (operator) {
+        case '+': return a + b;
+        case '-': return a - b;
+        case '*': return a * b;
+        case '/': return a / b;
+        default: return undefined
+    }
 }
