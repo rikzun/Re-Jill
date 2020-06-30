@@ -1,7 +1,8 @@
 import { Message } from "discord.js"
 export {
-    print, randint, wordTransfer, 
-    get, arrayDelValue, range, mth, 
+    print, randint, hyphenation, 
+    get, arrayDelValue, range,
+    mth, arrayTypeChange
     }
 
 function print(...data: any[]) {
@@ -13,25 +14,21 @@ function randint(min: number, max: number) {
     return Math.floor(Math.random() * (max - min + 1) + min)
 }
 
-function wordTransfer(obj) {
-    try {
-        obj = obj.split(' ')
-    } catch (error) {
-        return null
-    }
-    
-    let rt = ''
-    let i = 1
-    obj.forEach(v => {
-        if (i == 3) {
-        rt += v + '\n'
-        i = 0
-        } else {
-        rt += v + ' '
+function hyphenation(array: string[], limit: number) {
+    let rt = '',
+        lineLenght = 0
+
+    array.forEach(v => {
+        v = `[${v}] `
+        if (lineLenght + v.length > limit) {
+            rt += '\n' + v
+            lineLenght = v.length
+            return
         }
-        i++
+        rt += v
+        lineLenght += v.length
     })
-    return rt
+    return rt || null
 }
 
 function get(dict: object, key: string, rt:any = {}) {
@@ -58,4 +55,9 @@ function mth(a: number, operator: string, b: number): number {
         case '/': return a / b;
         default: return undefined
     }
+}
+function arrayTypeChange(array: Array<any>, type: any) {
+    array.forEach((e, i, a) => {
+        array[i] = type(e)
+    });
 }

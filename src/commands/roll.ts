@@ -1,12 +1,10 @@
-import {client} from '../bot'
 import {Message, MessageEmbed} from 'discord.js'
 import {print, mth, randint} from '../py'
 
 module.exports = {
-    name: 'roll',
-    run: async (message: Message, args: string[]) => {
+    'roll': async (message: Message, args: string[]) => {
         if (Number(args[1]) > 500 || Number(args[2]) > 10000) return;
-        if (!args[1]) {
+        if (!args[1] || Number(args[1]) < 1) {
             args[1] = '1'
         }
         let first: (string|number)[] = [],

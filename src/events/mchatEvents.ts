@@ -3,6 +3,8 @@ import { get, print } from '../py';
 
 (async () => {
     setInterval(() => {
+
+        //Очистка очереди серверов через неделю
         if ( get(data, 'queue', false) ) {
             for (const guild in data.queue) {
                 const create = Number(get(get(data.queue, guild), 'create'))
@@ -14,9 +16,10 @@ import { get, print } from '../py';
             }
         }
 
-        if ( Object.keys(get(data, 'messages')).length > 50 ) {
+        //Отчистка сообщений при превышении количества в 100 штук
+        if ( Object.keys(get(data, 'messages')).length > 100 ) {
             let count = Object.keys(data.messages).length
-            while (count > 50) {
+            while (count > 100) {
                 const idmsg = Object.keys(data.messages)[0]
                 delete data.messages[idmsg]
                 database.child(`/nmessages/${idmsg}`).remove()

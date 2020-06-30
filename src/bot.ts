@@ -3,51 +3,76 @@ import {data} from './events/firebase'
 import {print} from './py'
 import * as fs from 'fs' 
 import {
-    Client as BasicClient
+    Client as BasicClient, TextChannel
 } from 'discord.js'
 
-//Определяем тип команды, на всякий случай
-interface commandType {
-	name: string;
-	run: Function;
-}
-
-//Наследуем класс добавляя ебучий commands
+//Better bot class
 class Client extends BasicClient {
-    public commands: Map<string, commandType>
-    public unloadedCommands: Map<string, commandType>
+    public commands: {
+        [command: string]: {
+            file: {
+                name: string,
+                run: Function
+            },
+            on: boolean
+        }
+    }
+    public multi: {
+        queue: TextChannel,
+        ban: TextChannel
+    }
     public events: string[]
-    public unloadedEvents: string[]
     public owner: string
+    public prefix: string
+    public fileType: string
 }
 
 config();
 const token = process.env.DISCORD_TOKEN
-export const prefix = process.env.PREFIX
 export const client: Client = new Client();
-client.commands = new Map()
-client.unloadedCommands = new Map()
-client.events = new Array()
-client.unloadedEvents = new Array()
+client.commands = {};
+client.events = [];
+(async()=>{
+    client.multi = {
+        queue: await client.channels.fetch('693481088076611606') as TextChannel,
+        ban: await client.channels.fetch('693480909269368933') as TextChannel
+    }
+})();
 client.owner = '532935768918982656'
+client.prefix = process.env.PREFIX
+client.fileType = '.ts'
 
-//Обработчик ивентов
-const eventFiles = fs.readdirSync(__dirname + '/events').filter(file => file.endsWith('.ts'));
+
+
+
+//Event handler
+const eventFiles = fs.readdirSync(__dirname + '/events').filter(file => file.endsWith(client.fileType));
 for (const file of eventFiles) {
     require(`./events/${file}`)
 
-    client.events.push('.' + file.replace('.ts', ''))
+    client.events.push('.' + file.replace(client.fileType, ''))
 }
 
-//Обработчик команд
-const commandFiles = fs.readdirSync(__dirname + '/commands').filter(file => file.endsWith('.ts'));
+//Command handler
+const commandFiles = fs.readdirSync(__dirname + '/commands').filter(file => file.endsWith(client.fileType));
 for (const file of commandFiles) {
-    const command = require(`./commands/${file}`)
-    client.commands.set(command.name, command)
+    const commandFile = require(`./commands/${file}`)
+
+    //cmd
+    for (const command in commandFile) {
+        client.commands[command] = {
+            file: {
+                name: file,
+                run: commandFile[command]
+            },
+            on: true
+        }
+    }
 }
 
 client.once('ready', () => {
-    console.log('Jill готова к работе!')
+    client.user.setActivity('./help', { type: 'WATCHING' })
+    print('Jill готова к работе!')
 })
 
 client.login(token)

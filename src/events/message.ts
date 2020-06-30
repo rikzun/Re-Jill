@@ -1,22 +1,22 @@
 import {Message} from 'discord.js'
 import {print} from '../py'
-import {
-    client, prefix
-} from '../bot'
+import {client} from '../bot'
 
 let rollReg = /(\d*)?d(\d+)([-+*/])?(\d+)?( _\d+)?( .+)?/i
 
 client.on('message', async (message: Message) => {
     if (!message.guild) return;
-    if (!message.content.startsWith(prefix)) return;
-
-    let args = message.content.substring(prefix.length).split(' ')
-    if (message.content.substring(prefix.length).match(rollReg)) {
+    if (!message.content.startsWith(client.prefix)) return;
+    let args = message.content.substring(client.prefix.length).split(' ')
+    
+    //roll
+    if (message.content.substring(client.prefix.length).match(rollReg)) {
         args = message.content.match(rollReg)
         args[0] = 'roll'
     }
 
-    if (client.commands.has(args[0].toLowerCase())) {
-        client.commands.get(args[0].toLowerCase()).run(message, args)
+    //cmd
+    if (client.commands.hasOwnProperty(args[0]) && client.commands[args[0]].on) {
+        client.commands[args[0]].file.run(message, args)
     }
 })
