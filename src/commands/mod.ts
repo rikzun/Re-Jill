@@ -31,12 +31,13 @@ module.exports = {
         message.react('✅')
     },
     'user': async (message: Message, args: string[]) => {
+        if (!data.moderators.includes(message.author.id)) return;
         switch (args[1]) {
             case 'ban':
                 const user = await client.users.fetch(args[2])
                 
                 data.bans.push(args[2])
-                database.child(`/bans`).update({[data.bans.length]: args[2]})
+                database.child(`/bans`).update({[args[2]]: "0"})
 
                 const reason = args.slice(3).join(' ')
                 const msg = new MessageEmbed()
@@ -47,19 +48,20 @@ module.exports = {
                         {name: 'Ban issued', 
                         value: `Name: ${message.author.username}\nID: ${message.author.id}\nReason: ${reason}`}
                     )
-                client.multi.ban.send(msg)
+                const banChannel = await client.channels.fetch('693480909269368933') as TextChannel
+                banChannel.send(msg)
                 message.react('✅')
                 break;
         
             case 'unban':
-                const index = data.bans.indexOf(args[2])
-                database.child(`/bans/${index}`).remove()
+                database.child(`/bans/${args[2]}`).remove()
                 arrayDelValue(data.bans, args[2])
                 message.react('✅')
                 break;
         }
     },
     'guild': async (message: Message, args: string[]) => {
+        if (!data.moderators.includes(message.author.id)) return;
         switch (args[1]) {
             case 'add':
                 if (!get(data.queue, args[2], false)) {
@@ -102,12 +104,13 @@ module.exports = {
                         {name: 'Ban issued', 
                         value: `Name: ${message.author.username}\nID: ${message.author.id}\nReason: ${reason}`}
                     )
-                client.multi.ban.send(msg)
+                const banChannel = await client.channels.fetch('693480909269368933') as TextChannel
+                banChannel.send(msg)
 
                 delete data.webhooks[args[2]]
                 database.child(`/webhooks/${args[2]}`).remove()
 
-                database.child(`/guildbans`).update({[data.guildbans.length]: args[2]})
+                database.child(`/guildbans`).update({[args[2]]: "0"})
                 data.guildbans.push(args[2])
                 message.react('✅')
                 break;
@@ -116,7 +119,7 @@ module.exports = {
     'invite': async (message: Message, args: string[]) => {
         if (message.author.id !== client.owner) return;
 
-        database.child(`/moderators`).update({[data.moderators.length]: args[1]})
+        database.child(`/moderators`).update({[args[1]]: "0"})
         data.moderators.push(args[1])
         message.react('✅')
     }

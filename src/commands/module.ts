@@ -46,7 +46,7 @@ module.exports = {
     'load': async (message: Message, args: string[]) => {
 
         //file handler
-        if (args[1].includes(client.fileType)) {
+        if (args[1].includes('.ts')) {
             const usedFile = Object.keys(client.commands).filter((k) => client.commands[k].file.name == args[1] && !client.commands[k].on)
 
             if (!usedFile) {
@@ -93,7 +93,7 @@ module.exports = {
     'unload': async (message: Message, args: string[]) => {
 
         //file handler
-        if (args[1].includes(client.fileType)) {
+        if (args[1].includes('.ts')) {
             const usedFile = Object.keys(client.commands).filter((k) => client.commands[k].file.name == args[1] && client.commands[k].on)
 
             if (!usedFile) {
@@ -125,7 +125,7 @@ module.exports = {
     'reload': async (message: Message, args: string[]) => {
 
         //file handler
-        if (args[1].includes(client.fileType)) {
+        if (args[1].includes('.ts')) {
             const usedFile = Object.keys(client.commands).filter((k) => client.commands[k].file.name == args[1] && client.commands[k].on)
 
             if (!usedFile) {

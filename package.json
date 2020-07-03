@@ -1,16 +1,10 @@
 {
   "name": "jill-recreated",
-  "version": "1.0.0",
-  "main": "bot.ts",
+  "version": "0.1.2",
+  "main": "",
   "scripts": {
-    "hbuild": "tsc && copy package.json dist && copy src\\fire_account.json dist && copy src\\.env dist && copy Procfile dist",
     "javascript": "cd dist && node bot.js",
     "typescript": "cd src && ts-node bot"
-  },
-  "devDependencies": {
-    "@types/node": "^14.0.5",
-    "ts-node": "^8.10.1",
-    "typescript": "^3.8.3"
   },
   "author": "",
   "license": "ISC",
@@ -18,7 +12,10 @@
     "axios": "^0.19.2",
     "dotenv": "^8.2.0",
     "discord.js": "^12.2.0",
-    "firebase-admin": "^8.12.1"
+    "firebase-admin": "^8.12.1",
+    "@types/node": "^14.0.5",
+    "ts-node": "^8.10.1",
+    "typescript": "^3.8.3"
   },
   "keywords": [],
   "description": ""
