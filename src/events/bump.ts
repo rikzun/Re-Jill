@@ -28,67 +28,59 @@ client.on('message', async (message: Message) => {
     }
 });
 
-(async () => {
-    setInterval(() => {
-        if ( !get(data, 'bumptimer', false) ) return;
-
-        for (const guild in data.bumptimer) {
-            const now = Date.now(),
-                sdc = Number(get(data.bumptimer[guild], 'sdc', 'a')),
-                smon = Number(get(data.bumptimer[guild], 'smon', 'a'))
-
-            //sd.c
-            if ((now + 600000) - sdc >= 0) {
-                setTimeout(() => {
-                    
-                    (async() => {
-                        try {
-                            //send
-                            const bumpChannel = await client.channels.fetch(data.bumptimer[guild].channel) as TextChannel
-                            bumpChannel.send('Время для `s.up`')
-
-                            //del db
-                            delete data.bumptimer[guild].sdc
-                            database.child(`/bumptimer/${guild}/sdc`).remove()
-                        } catch (error) {
-                            switch (error['code']) {
-                                case '10003':
-
-                                    delete data.bumptimer[guild]
-                                    database.child(`/bumptimer/${guild}`).remove()
-                                    break;
-                            }
+setInterval(() => {
+    if ( !get(data, 'bumptimer', false) ) return;
+    for (const guild in data.bumptimer) {
+        const now = Date.now(),
+            sdc = Number(get(data.bumptimer[guild], 'sdc', 'a')),
+            smon = Number(get(data.bumptimer[guild], 'smon', 'a'))
+            
+        //sd.c
+        if ((now + 600000) - sdc >= 0) {
+            setTimeout(() => {
+                
+                (async() => {
+                    try {
+                        //send
+                        const bumpChannel = await client.channels.fetch(data.bumptimer[guild].channel) as TextChannel
+                        bumpChannel.send('Время для `s.up`')
+                        //del db
+                        delete data.bumptimer[guild].sdc
+                        database.child(`/bumptimer/${guild}/sdc`).remove()
+                    } catch (error) {
+                        switch (error['code']) {
+                            case '10003':
+                                delete data.bumptimer[guild]
+                                database.child(`/bumptimer/${guild}`).remove()
+                                break;
                         }
-                        
-                    })();
-                }, (now + 600000) - sdc);
-            }
-
-            //discord server
-            if ((now + 600000) - smon >= 0) {
-                setTimeout(() => {
+                    }
                     
-                    (async() => {
-                        try {
-                            //send
-                            const bumpChannel = await client.channels.fetch(data.bumptimer[guild].channel) as TextChannel
-                            bumpChannel.send('Время для `!bump`')
-
-                            //del db
-                            delete data.bumptimer[guild].smon
-                            database.child(`/bumptimer/${guild}/smon`).remove()
-                        } catch (error) {
-                            switch (error['code']) {
-                                case '10003':
-
-                                    delete data.bumptimer[guild]
-                                    database.child(`/bumptimer/${guild}`).remove()
-                                    break;
-                            }
-                        }
-                    })();
-                }, (now + 600000) - smon);
-            }
+                })();
+            }, (now + 600000) - sdc);
         }
-    }, 600000)
-})();
+        //discord server
+        if ((now + 600000) - smon >= 0) {
+            setTimeout(() => {
+                
+                (async() => {
+                    try {
+                        //send
+                        const bumpChannel = await client.channels.fetch(data.bumptimer[guild].channel) as TextChannel
+                        bumpChannel.send('Время для `!bump`')
+                        //del db
+                        delete data.bumptimer[guild].smon
+                        database.child(`/bumptimer/${guild}/smon`).remove()
+                    } catch (error) {
+                        switch (error['code']) {
+                            case '10003':
+                                delete data.bumptimer[guild]
+                                database.child(`/bumptimer/${guild}`).remove()
+                                break;
+                        }
+                    }
+                })();
+            }, (now + 600000) - smon);
+        }
+    }
+}, 600000)

@@ -7,7 +7,11 @@ client.on('message', async (message: Message) => {
     if (!message.guild) return;
     if (get(data.webhooks, message.guild.id).channelID !== message.channel.id) return;
     if (message.author.bot || message.webhookID) return;
-    if (data.bans.includes(message.author.id)) return;
+    if (data.bans.includes(message.author.id)) {
+        try {
+            message.delete()
+        } catch (error) {}
+    }
     if (message.content.startsWith('./') || message.content.startsWith('!')) return;
     if (message.content.includes('discord.gg')) {
 
@@ -41,36 +45,39 @@ client.on('message', async (message: Message) => {
         attachments.push(v.url)
     })
     const messageInfo = 
-        `Message: ${message.id}\n` +
+        `\n>>> \`\`\`Message: ${message.id}\n` +
         `User: ${message.author.id}\n` +
-        `Guild: ${message.guild.id}`;
+        `Guild: ${message.guild.id}\`\`\``;
 
     let messageIds = {}
     messageIds[message.channel.id] = message.id
+
+    const originalContent = message.content
     
     for (let guild in data.webhooks) {
-        if (data.webhooks[guild].channelID == message.channel.id) continue;
-        const webhook = new WebhookClient(
-            data.webhooks[guild].id, data.webhooks[guild].token);
-
-        let webhookName = message.author.username + '#' + message.author.discriminator
-        //Выделение модерации
-        if (data.moderators.includes(message.author.id)) {
-            webhookName += '[M]'
-        }
-        
-        //Сообщение с доп инфой на сервере поддержки
-        if (guild == '693480389586583553') {
-            message.embeds[0] = new MessageEmbed()
-                .setFooter(messageInfo)
-        }
         try {
+            if (data.webhooks[guild].channelID == message.channel.id) continue;
+            const webhook = new WebhookClient(
+                data.webhooks[guild].id, data.webhooks[guild].token);
+
+            let webhookName = message.author.username + '#' + message.author.discriminator
+            message.content = originalContent
+
+            //Выделение модерации
+            if (data.moderators.includes(message.author.id)) {
+                webhookName += '[M]'
+            }
+
+            //Сообщение с доп инфой на сервере поддержки
+            if (guild == '693480389586583553') {
+                message.content += messageInfo
+            }
+        
             const sendedMessage = await webhook.send(message.cleanContent, {
                 username: webhookName,
-                avatarURL: message.author.avatarURL({format: 'png'}),
+                avatarURL: message.author.avatarURL({format: 'png'}) ?? message.author.defaultAvatarURL,
                 disableMentions: 'everyone',
-                files: attachments,
-                embeds: message.embeds
+                files: attachments
             });
             messageIds[sendedMessage['channel_id']] = sendedMessage.id
         } catch (error) {

@@ -1,6 +1,6 @@
 import {client} from '../bot'
 import {inspect} from "util";
-import {Message, MessageEmbed} from 'discord.js'
+import {Message} from 'discord.js'
 
 module.exports = {
     'eval': async (message: Message, args: string[]) => {

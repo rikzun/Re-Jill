@@ -1,8 +1,8 @@
 import {data, database} from './firebase'
 import { get, print } from '../py';
 
-(async () => {
-    setInterval(() => {
+setInterval(() => {
+    (async() => {
 
         //Очистка очереди серверов через неделю
         if ( get(data, 'queue', false) ) {
@@ -15,7 +15,7 @@ import { get, print } from '../py';
                 }
             }
         }
-
+        
         //Отчистка сообщений при превышении количества в 100 штук
         if ( Object.keys(get(data, 'messages')).length > 100 ) {
             let count = Object.keys(data.messages).length
@@ -26,5 +26,5 @@ import { get, print } from '../py';
                 count--
             }
         }
-    }, 60000)
-})();
+    })()
+}, 60000)

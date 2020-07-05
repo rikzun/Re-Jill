@@ -49,7 +49,7 @@ module.exports = {
         if (args[1].includes('.ts')) {
             const usedFile = Object.keys(client.commands).filter((k) => client.commands[k].file.name == args[1] && !client.commands[k].on)
 
-            if (!usedFile) {
+            if (!usedFile.length) {
                 message.channel.send('Файл `' + args[1] + '` не найден.')
                 return
             };
@@ -77,12 +77,13 @@ module.exports = {
             command = false
         }
 
-        if (client.commands[args[1]].on) {
-            message.channel.send('Модуль `' + args[1] + '` уже загружен.')
-            return
-        }
         if (!command) {
             message.channel.send('Модуль `' + args[1] + '` не найден.')
+            return
+        }
+        
+        if (client.commands[args[1]].on) {
+            message.channel.send('Модуль `' + args[1] + '` уже загружен.')
             return
         }
 
@@ -96,7 +97,7 @@ module.exports = {
         if (args[1].includes('.ts')) {
             const usedFile = Object.keys(client.commands).filter((k) => client.commands[k].file.name == args[1] && client.commands[k].on)
 
-            if (!usedFile) {
+            if (!usedFile.length) {
                 message.channel.send('Файл `' + args[1] + '` не найден.')
                 return
             };
@@ -109,12 +110,13 @@ module.exports = {
         }
 
         //cmd only
-        if (!client.commands[args[1]].on) {
-            message.channel.send('Модуль `' + args[1] + '` уже выгружен.')
-            return
-        }
         if (!client.commands[args[1]]) {
             message.channel.send('Модуль `' + args[1] + '` не найден.')
+            return
+        }
+
+        if (!client.commands[args[1]].on) {
+            message.channel.send('Модуль `' + args[1] + '` уже выгружен.')
             return
         }
 
@@ -128,7 +130,7 @@ module.exports = {
         if (args[1].includes('.ts')) {
             const usedFile = Object.keys(client.commands).filter((k) => client.commands[k].file.name == args[1] && client.commands[k].on)
 
-            if (!usedFile) {
+            if (!usedFile.length) {
                 message.channel.send('Файл `' + args[1] + '` не найден.')
                 return
             };
@@ -143,13 +145,13 @@ module.exports = {
         }
 
         //cmd only
-        if (!client.commands[args[1]].on) {
-            message.channel.send('Модуль `' + args[1] + '` уже выгружен.')
-            return
-        }
-
         if (!client.commands[args[1]]) {
             message.channel.send('Модуль `' + args[1] + '` не найден.')
+            return
+        }
+            
+        if (!client.commands[args[1]].on) {
+            message.channel.send('Модуль `' + args[1] + '` уже выгружен.')
             return
         }
 

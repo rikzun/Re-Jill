@@ -1,4 +1,5 @@
 import * as firebase from 'firebase-admin';
+import {get} from '../py'
 import {print} from '../py'
 
 const serviceAccount = require('../../fire_account.json')
@@ -39,12 +40,27 @@ class Data {
             smon?: string;
             channel: string;
         }
+    }
+    privates: {
+        [guildID: string]: {
+            original: string;
+            createdChannels?: string[]
+        }
     };
 
     constructor(fullData: object) {
         this.webhooks = fullData['webhooks'] || {}
         this.messages = fullData['nmessages'] || {}
-        this.bans = Object.values(fullData['bans'] || [])
+        this.privates = fullData['privates'] || {}
+        for (let guild in this.privates) {
+            if (!get(this.privates[guild], 'createdChannels', false)){
+                this.privates[guild].createdChannels = []
+                continue
+            }
+
+            this.privates[guild].createdChannels = Object.keys(this.privates[guild].createdChannels)
+        }
+        this.bans = Object.keys(fullData['bans'] || [])
         this.queue = fullData['nqueue'] || {}
         this.guildbans = Object.keys(fullData['guildbans'] || [])
         this.moderators = Object.keys(fullData['moderators'] || [])

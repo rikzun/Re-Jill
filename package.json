@@ -3,8 +3,7 @@
   "version": "0.1.2",
   "main": "",
   "scripts": {
-    "javascript": "cd dist && node bot.js",
-    "typescript": "cd src && ts-node bot"
+    "typescript": "ts-node src/bot"
   },
   "author": "",
   "license": "ISC",

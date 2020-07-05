@@ -1,11 +1,11 @@
 import {client} from '../bot'
 import {get} from '../py'
 import {data, database} from '../events/firebase'
-import {Message, WebhookClient, MessageEmbed, TextChannel} from 'discord.js'
+import {Message, WebhookClient, MessageEmbed, TextChannel, GuildChannel} from 'discord.js'
 
 module.exports = {
     'settings': async (message: Message, args: string[]) => {
-
+        if (!message.guild) return;
         //admin check
         if (!(message.member.hasPermission('ADMINISTRATOR'))){
             message.channel.send('Требуется право Администратор.')
@@ -18,6 +18,60 @@ module.exports = {
                     .setDescription('Описание всех команд на [сайте](https://rikzun.github.io/jill.html)')
                 message.channel.send(Embed)
                 break;
+
+            case 'private':
+    
+                switch (args[2]) {
+                    case 'create':
+                        if (!message.guild.me.hasPermission(['MOVE_MEMBERS', 'MANAGE_CHANNELS'])) {
+                            const Embed = new MessageEmbed()
+                                .setTitle('Недостаточно прав!')
+                                .setDescription(
+                                    'Для использования требуются права:\n' +
+                                    '`Управлять каналами`\n' +
+                                    '`Перемещать участников`'
+                                    )
+                            message.channel.send(Embed)
+                            break;
+                        }
+                        const channel = await message.guild.channels.create('Создать приват', {type: 'voice', parent: (message.channel as GuildChannel).parent})
+                        
+                        data.privates[message.guild.id] = {original: channel.id, createdChannels: []}
+                        database.child(`/privates/${message.guild.id}`).update({original: channel.id})
+
+                        message.channel.send('Новые каналы будут созданы в той же категории что и канал, вы можете переместить его куда угодно.')
+                        break;
+
+                    case 'delete':
+                        if (!get(data.privates, message.guild.id, false)) {
+                            message.channel.send('У вас не включены приваты.')
+                            return
+                        }
+
+                        //удаление мейн канала
+                        const original = await client.channels.fetch(data.privates[message.guild.id].original) as GuildChannel
+                        original.delete()
+
+                        //удаляем созданные каналы
+                        if (get(data.privates[message.guild.id], 'createdChannels', false)) {
+                            for (let ch in data.privates[message.guild.id].createdChannels) {
+                                try {
+                                    const channel = await client.channels.fetch(ch) as GuildChannel
+                                    channel.delete()
+                                } catch (error) {
+                                    continue
+                                }
+                            }
+                        }
+
+                        //отчистка инфы
+                        delete data.privates[message.guild.id]
+                        database.child(`/privates/${message.guild.id}`).remove()
+
+                        message.channel.send('Все приваты были удалены.')
+                        break;
+                }
+            //
 
             case 'multichat':
 
@@ -83,7 +137,7 @@ module.exports = {
                                 const Embed = new MessageEmbed()
                                     .setTitle('Недостаточно прав!')
                                     .setDescription(
-                                        'Для использования требуются права:' +
+                                        'Для использования требуются права:\n' +
                                         '`Управления вебхуками`'
                                         )
                                 message.channel.send(Embed)
@@ -118,10 +172,10 @@ module.exports = {
                             const Embed = new MessageEmbed()
                                 .setTitle('Недостаточно прав!')
                                 .setDescription(
-                                    'Для использования требуются права:' +
-                                    '`Управлять сервером`' +
-                                    '`Управлять каналами`' +
-                                    '`Управлять вебхуками (webhooks)`' +
+                                    'Для использования требуются права:\n' +
+                                    '`Управлять сервером`\n' +
+                                    '`Управлять каналами`\n' +
+                                    '`Управлять вебхуками (webhooks)`\n' +
                                     '`Управлять сообщениями`'
                                     )
                             message.channel.send(Embed)
