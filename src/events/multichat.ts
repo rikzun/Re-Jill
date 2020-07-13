@@ -5,12 +5,13 @@ import {client} from '../bot'
 
 client.on('message', async (message: Message) => {
     if (!message.guild) return;
-    if (get(data.webhooks, message.guild.id).channelID !== message.channel.id) return;
+    if (get(get(data, 'webhooks', {}), message.guild.id, {channelID: false}).channelID !== message.channel.id) return;
     if (message.author.bot || message.webhookID) return;
     if (data.bans.includes(message.author.id)) {
         try {
-            message.delete()
+            await message.delete()
         } catch (error) {}
+        return;
     }
     if (message.content.startsWith('./') || message.content.startsWith('!')) return;
     if (message.content.includes('discord.gg')) {
@@ -36,7 +37,10 @@ client.on('message', async (message: Message) => {
             .setTitle('Вы были забанены')
             .setDescription('Бан выдан модератором Jill.\nПричина: Ссылка-приглашение')
         message.channel.send(banMessage)
-        return
+        try {
+            await message.delete()
+        } catch (error) {}
+        return;
     }
     
     //Подкручиваем все вложения
@@ -45,9 +49,9 @@ client.on('message', async (message: Message) => {
         attachments.push(v.url)
     })
     const messageInfo = 
-        `\n>>> \`\`\`Message: ${message.id}\n` +
-        `User: ${message.author.id}\n` +
-        `Guild: ${message.guild.id}\`\`\``;
+        `\n>>> \`\`\`md\n[${message.id}](MESSAGE)\n` +
+        `[${message.author.id}](USER)\n` +
+        `[${message.guild.id}](GUILD)\`\`\``;
 
     let messageIds = {}
     messageIds[message.channel.id] = message.id
@@ -120,10 +124,11 @@ client.on('messageDelete', async (message: Message) => {
         for (let ch in data.messages[message.id]) {
             if (data.messages[message.id][ch] == message.id) continue;
 
-            const channel = await client.channels.fetch(ch) as TextChannel
-            const msg = await channel.messages.fetch(data.messages[message.id][ch])
             try {
-                msg.delete()
+                const channel = await client.channels.fetch(ch) as TextChannel
+                const msg = await channel.messages.fetch(data.messages[message.id][ch])
+                await msg.delete()
+                
             } catch (error) {
                 continue
             }

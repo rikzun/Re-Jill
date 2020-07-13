@@ -1,8 +1,9 @@
-import { Message } from "discord.js"
+import {Message, PermissionString} from 'discord.js'
 export {
     print, randint, hyphenation, 
     get, arrayDelValue, range,
-    mth, arrayTypeChange
+    mth, arrayTypeChange, translatePerm,
+    botHasPermissions
     }
 
 function print(...data: any[]) {
@@ -31,7 +32,7 @@ function hyphenation(array: string[], limit: number) {
     return rt || null
 }
 
-function get(dict: object, key: string, rt:any = {}) {
+function get(dict: object, key: string, rt:any = undefined) {
     return dict?.[key] ?? rt
 }
 
@@ -60,4 +61,21 @@ function arrayTypeChange(array: Array<any>, type: any) {
     array.forEach((e, i, a) => {
         array[i] = type(e)
     });
+}
+
+function translatePerm(arr: string[], message: string) {
+    const dictionary = {
+        'ADMINISTRATOR': 'Администратор',
+        'MANAGE_CHANNELS': 'Управлять каналами',
+        'MANAGE_GUILD': 'Управлять сервером'
+    }
+    arr.forEach(element => {
+        message += `\n\`${dictionary[element]}\``
+    })
+    return message
+}
+
+function botHasPermissions(message: Message, perms: PermissionString[]) {
+    if (message.guild.me.hasPermission(perms)) return true;
+    return translatePerm(perms, 'Боту требуются права:')
 }
