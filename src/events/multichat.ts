@@ -3,6 +3,7 @@ import {data, database} from '../events/firebase'
 import {print, get} from '../py'
 import {client} from '../bot'
 
+const zerodict = /(#\d{4})#0000/
 client.on('message', async (message: Message) => {
     if (!message.guild) return;
     if (get(get(data, 'webhooks', {}), message.guild.id, {channelID: false}).channelID !== message.channel.id) return;
@@ -55,6 +56,10 @@ client.on('message', async (message: Message) => {
 
     let messageIds = {}
     messageIds[message.channel.id] = message.id
+
+    const zerotrigger = message.content.match(zerodict)
+    if (zerotrigger) {
+        message.content = message.content.replace(zerotrigger[0], zerotrigger[1])}
 
     const originalContent = message.content
     

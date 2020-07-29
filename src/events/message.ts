@@ -5,23 +5,26 @@ import {
 import { print, translatePerm, arrayTypeChange } from '../py';
 
 const rollReg = /(\d*)?d(\d+)([-+*/])?(\d+)?( _\d+)?( .+)?/i
+const types = {
+    'string': String,
+    'number': Number
+}
+
 client.on('message', async (message: Message) => {
     //mention bot
     if (message.content == '<@!608154725338185738>') {
-        client.commands.help.run(message)
-        return
+        message.content = './help'
     }
     
     if (!message.content.startsWith(client.prefix)) return;
     if (message.author.bot) return;
 
+    //roll
     if (message.content.match(rollReg)) {
-        let rollargs = message.content.match(rollReg)
-        rollargs.shift()
-        client.commands.roll.run(message, rollargs)
-        return
+        let rollContent = message.content.match(rollReg)
+        rollContent.shift()
+        message.content = `./roll ${rollContent[0] ?? ''} ${rollContent[1]} ${rollContent[2] ?? ''} ${rollContent[3] ?? ''}${(rollContent[4] ?? ' ').replace('_', '')}${rollContent[5] ?? ' '}`
     }
-
     const content = message.content.substring(client.prefix.length).split(' ')
     const commandName = String(content.slice(0, 1))
     let messageArgs = content.splice(1)
@@ -77,12 +80,25 @@ client.on('message', async (message: Message) => {
                 break;
 
             case '*':
-                messageArgs[i] = (messageArgs.splice(i).join(' '))
+                messageArgs[i] = messageArgs.splice(i).join(' ')
                 break;
 
-            case 'string[]':
+            case '[]':
                 messageArgs.splice(i-1, 1)
                 transferArgs.push(messageArgs)
+                break;
+
+            case 'number':
+            case 'string':
+                if (!argContent) {
+                    transferArgs.push(undefined)
+
+                } else if (typeof argContent == arg) {
+                    transferArgs.push(argContent)
+
+                } else {
+                    transferArgs.push(types[arg](argContent))
+                }
                 break;
 
             case 'User':
@@ -101,11 +117,15 @@ client.on('message', async (message: Message) => {
                     }
                     //username
                     else {
+                        if (!argContent) {
+                            transferArgs.push(undefined)
+                            break;
+                        }
                         if (opt) {
                             transferArgs.push(argContent)
                             break;
                         }
-                        transferArgs.push(client.users.cache.find(u => u.username.toLowerCase() == argContent.toLowerCase()))
+                        transferArgs.push(client.users.cache.find(u => u.username.toLowerCase() == argContent.toLowerCase()) ?? null)
                     }
     
                 } catch (error) {
@@ -129,11 +149,15 @@ client.on('message', async (message: Message) => {
                     }
                     //username
                     else {
+                        if (!argContent) {
+                            transferArgs.push(undefined)
+                            break;
+                        }
                         if (opt) {
                             transferArgs.push(argContent)
                             break;
                         }
-                        transferArgs.push(message.guild.members.cache.find(m => m.user.username.toLowerCase() == argContent.toLowerCase()))
+                        transferArgs.push(message.guild.members.cache.find(m => m.user.username.toLowerCase() == argContent.toLowerCase()) ?? null)
                     }
 
                 } catch (error) {
@@ -155,11 +179,15 @@ client.on('message', async (message: Message) => {
                     }
                     //name
                     else {
+                        if (!argContent) {
+                            transferArgs.push(undefined)
+                            break;
+                        }
                         if (opt) {
                             transferArgs.push(argContent)
                             break;
                         }
-                        transferArgs.push(client.channels.cache.find(c => c['name'] == argContent))
+                        transferArgs.push(client.channels.cache.find(c => c['name'] == argContent) ?? null)
                     }
 
                 } catch (error) {
@@ -177,11 +205,15 @@ client.on('message', async (message: Message) => {
                     }
                     //name
                     else {
+                        if (!argContent) {
+                            transferArgs.push(undefined)
+                            break;
+                        }
                         if (opt) {
                             transferArgs.push(argContent)
                             break;
                         }
-                        transferArgs.push(client.channels.cache.find(c => c['name'] == argContent))
+                        transferArgs.push(client.channels.cache.find(c => c['name'] == argContent) ?? null)
                     }
     
                 } catch (error) {

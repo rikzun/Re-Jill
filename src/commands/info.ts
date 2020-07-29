@@ -1,11 +1,11 @@
 import {client} from '../bot'
 import {Message, MessageEmbed, GuildMember} from 'discord.js'
-import {get, print} from '../py'
+import {get, print, strftime} from '../py'
 import {data} from '../events/firebase'
 
 module.exports = [
     {
-        names: ['help'],
+        names: ['help', '?'],
         run: async (message: Message) => {
             const msg = new MessageEmbed()
                 .setDescription('[Сайт](https://rikzun.github.io/jill.html) с командами')
@@ -21,21 +21,15 @@ module.exports = [
                 return
             }
             let bumptime = ''
-            const opt = {
-                hour: "numeric",
-                minute: "numeric",
-                second: "numeric",
-                hour12: false
-            }
             if (get(data.bumptimer[message.guild.id], 'sdc')) {
-                const sdc = new Date(Math.abs(Date.now() - Number(data.bumptimer[message.guild.id].sdc))).toLocaleString("ru-RU", opt);
-                bumptime += `До s.up осталось \`${sdc}\`\n` 
+                bumptime += strftime('До `s.up` осталось %H:%M:%S\n', Date.now() - Number(data.bumptimer[message.guild.id].sdc))
             }
             if (get(data.bumptimer[message.guild.id], 'smon')) {
-                const smon = new Date(Math.abs(Date.now() - Number(data.bumptimer[message.guild.id].smon))).toLocaleString("ru-RU", opt);
-                bumptime += `До !bump осталось \`${smon}\`\n` 
+                bumptime += strftime('До `!bump` осталось %H:%M:%S', Date.now() - Number(data.bumptimer[message.guild.id].smon))
             }
-            if (bumptime.length == 0) return;
+            if (bumptime.length == 0) {
+                bumptime = 'пусто'
+            };
 
             const Embed = new MessageEmbed()
                 .setDescription(bumptime)
@@ -44,28 +38,25 @@ module.exports = [
     },
     {
         names: ['user'],
-        args: ['*', 'User'],
-        run: async (message: Message, member: GuildMember = message.member) => {
+        args: ['*', 'GuildMember'],
+        run: async (message: Message, member: GuildMember) => {
+            if (typeof member == 'undefined') {
+                member = message.member
+            } else if (member == null) {
+                message.channel.send('Пользователь не найден.')
+                return
+            }
 
             let avatar: string
-            if (!get(member.user, 'avatar', false)) {
+            if (member.user.avatar == null) {
                 avatar = member.user.defaultAvatarURL
             } else if (member.user.avatar.startsWith('a_')) {
                 avatar = member.user.avatarURL({format: 'gif', size: 1024})
             } else {
                 avatar = member.user.avatarURL({format: 'png', size: 1024})
             }
-            const opt = {
-                year: "numeric",
-                month: "numeric",
-                day: "numeric",
-                hour: "numeric",
-                minute: "numeric",
-                second: "numeric",
-                hour12: false
-              }
-            const joinedAt = new Date(member.joinedTimestamp).toLocaleString("ru-RU", opt)
-            const regAt = new Date(member.user.createdTimestamp).toLocaleString("ru-RU", opt)
+            const joinedAt = strftime('%d.%m.%y %H:%M:%S', member.joinedTimestamp)
+            const regAt = strftime('%d.%m.%y %H:%M:%S', member.user.createdTimestamp)
             const Embed = new MessageEmbed()
                 .setTitle(member.user.tag)
                 .setDescription(

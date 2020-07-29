@@ -11,12 +11,57 @@ module.exports = [
         args: ['*', 'string'],
         owner: true,
         run: async (message: Message, code: string) => {
-            if (message.author.id !== client.owner) return;
             try {
                 let evaled = await eval(code);
                 if (typeof evaled !== "string") evaled = inspect(evaled);
-             
-                message.channel.send('>>> ```ts\n' + evaled.slice(0, 1900) + '```')
+                
+                //разбиваем текст и собираем в буфер
+                let buffer = [],
+                    page = 0
+
+                for (let tl = evaled.length; tl > 0; tl = tl - 1900) {
+                    let part = evaled.slice(0, 1900)
+                    buffer.push(part)
+                    evaled = evaled.replace(part, '')
+                }
+                
+                if (buffer.length == 0) buffer.push(evaled)
+
+                const sendedMessage = await message.channel.send('>>> ```ts\n' + buffer[page] + `\n\n::page ${page + 1}/${buffer.length}` + '```')
+                if (buffer.length == 1) return
+
+                await sendedMessage.react('⏮️')
+                await sendedMessage.react('⏪')
+                await sendedMessage.react('⏩')
+			    await sendedMessage.react('⏭️')
+
+                const filter = (reaction, user) => user.id == message.author.id
+                
+                const collector = sendedMessage.createReactionCollector(filter, { time: 120000, dispose: true });
+                const pageMove = 
+                    async reaction => {
+                        switch (reaction.emoji.name) {
+    
+                            case '⏪':
+                                if (page == 0) break
+                                page--
+                                sendedMessage.edit('>>> ```ts\n' + buffer[page] + `\n\n::page ${page + 1}/${buffer.length}` + '```')
+                                break;
+
+                            case '⏩':
+                                if (page + 1 >= buffer.length) break
+                                page++
+                                sendedMessage.edit('>>> ```ts\n' + buffer[page] + `\n\n::page ${page + 1}/${buffer.length}` +'```')
+                                break;
+                        }
+                    }
+
+                collector.on('collect', pageMove)
+                collector.on('remove', pageMove)
+                collector.on('end', async collected => {
+                    await sendedMessage.reactions.removeAll()
+                        .catch()
+                })
             } catch (error) {
                 message.channel.send('>>> ```ts\n' + error + '```')
             }

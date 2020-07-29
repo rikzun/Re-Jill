@@ -4,88 +4,94 @@ import {print, mth, randint} from '../py'
 module.exports = [
     {
         names: ['roll'],
-        args: ['string[]'],
-        run: async (message: Message, code: string[]) => {
-            if (Number(code[0]) > 500 || Number(code[1]) > 10000) return;
-
-            //missing #d
-            if (!code[0] || Number(code[0]) < 1) {
-                code[0] = '1'
-            }
-    
-            //first - модифицированное число, second - оригинал (при отстутсвии мода first - оригинал)
-            let first: (string|number)[] = [],
-                second: (string|number)[] = [],
-                highlightFirst = 0,
-                highlightSecond = 0
-    
-            //генерация чисел
-            for (let i = Number(code[0]); i > 0; i--) {
-                let genNum: number | string = randint(1, Number(code[1])) //сгенерированное число
-                let mod: number | string = mth(genNum, code[2], Number(code[3])) //модифицированное число
-                let highlight: number //число для выделения
-    
-                if (code[4]) {
-                    highlight = Number(code[4].replace('_', ''))
-                }
-
-                //выделение чисел
-                if (mod >= highlight) {
-                    mod = '[' + mod + ']'
-                    highlightFirst++
-                }
-
-                if (genNum >= highlight) {
-                    genNum = '[' + genNum + ']'
-                    highlightSecond++
-                }
-    
-                if (mod !== 'undefined') {
-                    first.push(mod)
-                    second.push(genNum)
-                    continue
-                }
-    
-                first.push(genNum)
-            }
-    
-            //подсчитывание суммы чисел
-            let onlyNums: number[] = []
-            for (let i = first.length - 1; i > -1; i--) {
-                let value = first[i]
-                if (typeof first[i] == 'string') {
-                    value = String(first[i]).replace('[', '').replace(']', '')
-                }
-                onlyNums.push(Number(value))
-            }
-            const reducer = (accumulator, currentValue) => accumulator + currentValue
-            const sum = '[' + onlyNums.reduce(reducer) + ']'
-                
-            //собираем текст
-            let text = code[5] ?? ''
-            if (first.length) {
-                text += '```\n' + first.join(' ')
-            }
-            if (second.length) {
-                text += '\n' + second.join(' ')
-            }
-            text += '```'
-    
-            if (text.length > 1024) {
+        args: ['number', 'number', 'string', 'number', 'number', '*', 'string'],
+        run: async (message: Message, diceCount: number = 1, diceSize: number, modSymbol: string, modNumber: number, highlight: number, description: string) => {
+            if (diceCount > 500 || diceSize > 1000) {
                 message.react('❌')
                 return
             }
     
-            let highlightCout = ''
-            if (highlightFirst) {
-                highlightCout += `_${highlightFirst} `
+            let line1: (string|number)[] = [],
+                line1hl: number = 0,
+                line1sum: number = 0,
+                line2: (string|number)[] = [],
+                line2hl: number = 0
+    
+            //генерация чисел
+            for (let i = diceCount; i > 0; i--) {
+                const generated: number = randint(1, diceSize)
+
+                if (!(modSymbol && (typeof modNumber !== 'undefined'))) {
+                    line1sum += generated
+                    if (highlight) {
+                        if (generated >= highlight) {
+                            line1.push(`[${generated}]`)
+                            line1hl++
+                        } else {
+                            line1.push(generated)
+                        }
+
+                    } else {
+                        line1.push(generated)
+                    }
+
+                } else {
+                    const modificated = mth(generated, modSymbol, modNumber)
+                    line1sum += modificated
+
+                    if (highlight) {
+
+                        if (modificated >= highlight) {
+                            line1.push(`[${modificated}]`)
+                            line1hl++
+                        } else {
+                            line1.push(modificated)
+                        }
+
+                        if (generated >= highlight) {
+                            line2.push(`[${generated}]`)
+                            line2hl++
+                        } else {
+                            line2.push(generated)
+                        }
+                        
+                    } else {
+                        line1.push(modificated)
+                        line2.push(generated)
+                    }
+                }
             }
-            if (highlightSecond) {
-                highlightCout += `_${highlightSecond}`
+
+            if (description) {
+                description += '\n'
+            }
+
+            let allHighlight = '',
+                text = ''
+
+            if (line1.length > 0) {
+                text += `${line1.join(' ')}`
+            }
+            if (line2.length > 0) {
+                text += `\n${line2.join(' ')}`
+            }
+
+            text = (description ?? '') + '```\n' + text + '```'
+
+            if (text.length > 1024) {
+                message.react('❌')
+                return
+            }
+
+            if (line1hl > 0) {
+                allHighlight += `_${line1hl}`
+            }
+            if (line2hl > 0) {
+                allHighlight += ` _${line2hl}`
             }
     
             const embedMessage = new MessageEmbed()
-                .addField(`${message.author.username} ${sum} ${highlightCout}`, text)
+                .addField(`${message.author.username} [${line1sum}] ${allHighlight}`, text)
             
             message.channel.send(embedMessage)
         }

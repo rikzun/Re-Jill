@@ -4,14 +4,9 @@ import {data, database} from '../events/firebase'
 import {print, arrayDelValue, get} from '../py'
 
 module.exports = [
-    // {
-    //     names: [''],
-    //     run: async (message: Message) => {
-    //     }
-    // },
     {
         names: ['mod'],
-        args: ['string', 'string[]'],
+        args: ['string', '[]'],
         run: async (message: Message, category: string, args: string[]) => {
             if (!data.moderators.includes(message.author.id)) return;
 
@@ -26,9 +21,10 @@ module.exports = [
 
                     //del all messages into all servers
                     for (let ch in data.messages[args[0]]) {
-                        const channel = await client.channels.fetch(ch) as TextChannel
-                        const message = await channel.messages.fetch(data.messages[args[0]][ch])
                         try {
+                            const channel = await client.channels.fetch(ch) as TextChannel
+                            const message = await channel.messages.fetch(data.messages[args[0]][ch])
+                            
                             await (message.delete())
                         } catch (error) {
                             continue
