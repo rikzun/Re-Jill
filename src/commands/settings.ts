@@ -1,14 +1,14 @@
-import {client} from '../bot'
+import {client, CommandFile} from '../bot'
 import {get, print, botHasPermissions} from '../py'
 import {data, database} from '../events/firebase'
 import {Message, WebhookClient, MessageEmbed, TextChannel, GuildChannel} from 'discord.js'
 
-module.exports = [
+const commands: CommandFile[] = [
     {
         names: ['s'],
         perms: ['ADMINISTRATOR'],
         guild: true,
-        args: ['string', 'string', 'TextChannel?'],
+        args: {option: '', act: '', 'object?': 'TextChannel'},
         run: async (message: Message, option: string, act: string, object: TextChannel | string) => {
             switch (option) {
                 case 'private':
@@ -183,8 +183,9 @@ module.exports = [
                                 break;
                             }
 
-                            //set slowmode
+                            //set slowmode and update everyone perm
                             object.setRateLimitPerUser(5)
+                            object.updateOverwrite(message.guild.roles.everyone.id, {'USE_EXTERNAL_EMOJIS': true})
         
                             const webhookData = {
                                 create: String(Date.now()),
@@ -249,3 +250,4 @@ module.exports = [
         }
     }
 ]
+export default commands

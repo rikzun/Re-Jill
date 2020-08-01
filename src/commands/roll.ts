@@ -1,10 +1,11 @@
+import {client, CommandFile} from '../bot'
 import {Message, MessageEmbed} from 'discord.js'
 import {print, mth, randint} from '../py'
 
-module.exports = [
+const commands: CommandFile[] = [
     {
         names: ['roll'],
-        args: ['number', 'number', 'string', 'number', 'number', '*', 'string'],
+        args: {diceCount: 'number', diceSize: 'number', modSymbol: '', modNumber: 'number', highlight: 'number', 'description*': ''},
         run: async (message: Message, diceCount: number = 1, diceSize: number, modSymbol: string, modNumber: number, highlight: number, description: string) => {
             if (diceCount > 500 || diceSize > 1000) {
                 message.react('❌')
@@ -97,3 +98,4 @@ module.exports = [
         }
     },
 ]
+export default commands

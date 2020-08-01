@@ -60,49 +60,61 @@ client.on('message', async (message: Message) => {
     }
 
     //arguments
-    const cmdArguments = cmd.propertes.args
+    const cmdArgs = cmd.propertes.args
+    const cmdArgsKeys = Object.keys(cmd.propertes.args)
     let transferArgs = []
     transferArgs.push(message)
 
-    cmdArguments.forEach(async(arg, i, a) => {
-        if (a[i - 1] == '*') i--;
-        const argContent = messageArgs[i]
+    for (let argName in cmdArgs) {
+        const argIndex = cmdArgsKeys.indexOf(argName)
+        let optional = false
 
-        //optional arguments
-        let opt: boolean = false
-        if (arg.endsWith('?')) {
-            arg = arg.replace('?', '')
-            opt = true
+        const identifier = argName.match(/\w+(\[\]|\*|\?)/)
+        if (identifier) {
+            switch (identifier[1]) {
+                case '*':
+                    messageArgs[argIndex] = messageArgs.splice(argIndex).join(' ')
+                    break;
+    
+                case '[]':
+                    messageArgs = messageArgs.splice(argIndex, messageArgs.length)
+                    transferArgs.push(messageArgs)
+                    continue;
+                
+                case '?':
+                    optional = true
+                    break;
+            }
         }
-        switch (arg) {
-            default:
+
+        const argContent = messageArgs[argIndex]
+        switch (cmdArgs[argName]) {
+
+            case '':
                 transferArgs.push(argContent)
-                break;
-
-            case '*':
-                messageArgs[i] = messageArgs.splice(i).join(' ')
-                break;
-
-            case '[]':
-                messageArgs.splice(i-1, 1)
-                transferArgs.push(messageArgs)
                 break;
 
             case 'number':
             case 'string':
                 if (!argContent) {
                     transferArgs.push(undefined)
+                    break}
 
-                } else if (typeof argContent == arg) {
+                if (typeof argContent == cmdArgs[argName]) {
                     transferArgs.push(argContent)
-
+        
                 } else {
-                    transferArgs.push(types[arg](argContent))
+                    transferArgs.push(types[cmdArgs[argName]](argContent))
                 }
                 break;
 
             case 'User':
                 try {
+                    if (!argContent) {
+                        transferArgs.push(undefined)
+                        break;
+                    }
+    
                     //@mention
                     if (argContent.match(/<@!\d+>/)) {
                         transferArgs.push(
@@ -117,24 +129,25 @@ client.on('message', async (message: Message) => {
                     }
                     //username
                     else {
-                        if (!argContent) {
-                            transferArgs.push(undefined)
-                            break;
-                        }
-                        if (opt) {
+                        const user = client.users.cache.find(u => u.username.toLowerCase() == argContent.toLowerCase()) ?? null
+                        if (optional && !user) {
                             transferArgs.push(argContent)
-                            break;
                         }
-                        transferArgs.push(client.users.cache.find(u => u.username.toLowerCase() == argContent.toLowerCase()) ?? null)
+                        transferArgs.push(user)
                     }
-    
+        
                 } catch (error) {
                     transferArgs.push(undefined)
                 }
                 break;
-                
+
             case 'GuildMember':
                 try {
+                    if (!argContent) {
+                        transferArgs.push(undefined)
+                        break;
+                    }
+
                     //@mention
                     if (argContent.match(/<@!\d+>/)) {
                         transferArgs.push(
@@ -149,17 +162,12 @@ client.on('message', async (message: Message) => {
                     }
                     //username
                     else {
-                        if (!argContent) {
-                            transferArgs.push(undefined)
-                            break;
-                        }
-                        if (opt) {
+                        const member = message.guild.members.cache.find(m => m.user.username.toLowerCase() == argContent.toLowerCase()) ?? null
+                        if (optional && !member) {
                             transferArgs.push(argContent)
-                            break;
                         }
-                        transferArgs.push(message.guild.members.cache.find(m => m.user.username.toLowerCase() == argContent.toLowerCase()) ?? null)
+                        transferArgs.push(member)
                     }
-
                 } catch (error) {
                     transferArgs.push(undefined)
                 }
@@ -167,6 +175,11 @@ client.on('message', async (message: Message) => {
 
             case 'TextChannel':
                 try {
+                    if (!argContent) {
+                        transferArgs.push(undefined)
+                        break;
+                    }
+
                     //#mention
                     if (argContent.match(/<#\d+>/)) {
                         transferArgs.push(message.mentions.channels.get(argContent.match(/<#(\d*)>/)[1]))
@@ -179,24 +192,25 @@ client.on('message', async (message: Message) => {
                     }
                     //name
                     else {
-                        if (!argContent) {
-                            transferArgs.push(undefined)
-                            break;
-                        }
-                        if (opt) {
+                        const channel = client.channels.cache.find(c => c['name'] == argContent) ?? null
+                        if (optional && !channel) {
                             transferArgs.push(argContent)
-                            break;
                         }
-                        transferArgs.push(client.channels.cache.find(c => c['name'] == argContent) ?? null)
+                        transferArgs.push(channel)
                     }
-
+    
                 } catch (error) {
                     transferArgs.push(undefined)
                 }
                 break;
-
+    
             case 'VoiceChannel':
                 try {
+                    if (!argContent) {
+                        transferArgs.push(undefined)
+                        break;
+                    }
+
                     //id
                     if (argContent.match(/\d+/)) {
                         transferArgs.push(
@@ -205,22 +219,18 @@ client.on('message', async (message: Message) => {
                     }
                     //name
                     else {
-                        if (!argContent) {
-                            transferArgs.push(undefined)
-                            break;
-                        }
-                        if (opt) {
+                        const channel = client.channels.cache.find(c => c['name'] == argContent) ?? null
+                        if (optional && !channel) {
                             transferArgs.push(argContent)
-                            break;
                         }
-                        transferArgs.push(client.channels.cache.find(c => c['name'] == argContent) ?? null)
+                        transferArgs.push(channel)
                     }
-    
+        
                 } catch (error) {
                     transferArgs.push(undefined)
                 }
                 break;
         }
-    })
+    }
     cmd.run(...await transferArgs)
 })

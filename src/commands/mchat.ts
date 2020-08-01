@@ -1,9 +1,9 @@
-import {client} from '../bot'
+import {client, CommandFile} from '../bot'
 import {Message, WebhookClient, TextChannel, MessageEmbed} from 'discord.js'
 import {data, database} from '../events/firebase'
 import {print, get} from '../py'
 
-module.exports = [
+const commands: CommandFile[] = [
     {
         names: ['faq'],
         run: async (message: Message) => {
@@ -43,3 +43,4 @@ module.exports = [
         }
     },    
 ]
+export default commands

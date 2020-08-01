@@ -1,13 +1,13 @@
-import {client} from '../bot'
-import {Message, GuildMember} from 'discord.js'
-import * as https from 'https'
+import {client, CommandFile} from '../bot'
+import {Message, GuildMember, User} from 'discord.js'
 import {print, get} from '../py'
 
-module.exports = [
-    {   
+const commands: CommandFile[] = [
+    {
         names: ['tt'],
         owner: true,
-        run: async (message: Message) => {
+        run: async (message: Message, ) => {
         }
     }
 ]
+export default commands

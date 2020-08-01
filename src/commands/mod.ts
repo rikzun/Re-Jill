@@ -1,12 +1,12 @@
-import {client} from '../bot'
+import {client, CommandFile} from '../bot'
 import {Message, TextChannel, WebhookClient, MessageEmbed} from 'discord.js'
 import {data, database} from '../events/firebase'
 import {print, arrayDelValue, get} from '../py'
 
-module.exports = [
+const commands: CommandFile[] = [
     {
         names: ['mod'],
-        args: ['string', '[]'],
+        args: {category: '', 'args[]': ''},
         run: async (message: Message, category: string, args: string[]) => {
             if (!data.moderators.includes(message.author.id)) return;
 
@@ -140,3 +140,4 @@ module.exports = [
         }
     },
 ]
+export default commands

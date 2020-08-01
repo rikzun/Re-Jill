@@ -2,13 +2,13 @@ import {
     Message, MessageEmbed
 } from 'discord.js'
 import {inspect} from "util"
-import {client} from '../bot'
+import {client, CommandFile} from '../bot'
 import {hyphenation, print} from '../py'
 
-module.exports = [
+const commands: CommandFile[] = [
     {
         names: ['eval', 'e'],
-        args: ['*', 'string'],
+        args: {'code*': ''},
         owner: true,
         run: async (message: Message, code: string) => {
             try {
@@ -69,7 +69,7 @@ module.exports = [
     },
     {
         names: ['cog'],
-        args: ['string', 'string'],
+        args: {act: '', object: ''},
         owner: true,
         run: async (message: Message, act: string, object: string) => {
             switch (act) {
@@ -241,3 +241,4 @@ module.exports = [
         }
     },
 ]
+export default commands

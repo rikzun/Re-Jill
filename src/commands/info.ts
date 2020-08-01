@@ -1,9 +1,9 @@
-import {client} from '../bot'
+import {client, CommandFile} from '../bot'
 import {Message, MessageEmbed, GuildMember} from 'discord.js'
 import {get, print, strftime} from '../py'
 import {data} from '../events/firebase'
 
-module.exports = [
+const commands: CommandFile[] = [
     {
         names: ['help', '?'],
         run: async (message: Message) => {
@@ -38,7 +38,9 @@ module.exports = [
     },
     {
         names: ['user'],
-        args: ['*', 'GuildMember'],
+        args: {
+            'member*': 'GuildMember'
+        },
         run: async (message: Message, member: GuildMember) => {
             if (typeof member == 'undefined') {
                 member = message.member
@@ -70,3 +72,4 @@ module.exports = [
         }
     }
 ]
+export default commands

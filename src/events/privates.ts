@@ -12,14 +12,10 @@ client.on('voiceStateUpdate', async (before: VoiceState, after: VoiceState) => {
         const category = (await client.channels.fetch(data.privates[after.guild.id].original) as VoiceChannel).parent
         const channel = await after.guild.channels.create(
             after.member.user.username, {
-                type: 'voice', userLimit: 1, parent: category,
-                permissionOverwrites: [
-                    {
-                        id: after.member.id,
-                        allow: ['MANAGE_CHANNELS', 'ADMINISTRATOR', 'MANAGE_ROLES', 'MUTE_MEMBERS', 'DEAFEN_MEMBERS', 'MOVE_MEMBERS'],
-                    },
-                ],
+                type: 'voice', userLimit: 1, parent: category
             })
+        channel.lockPermissions()
+        channel.updateOverwrite(after.member.id, {'ADMINISTRATOR': true})
 
         data.privates[after.guild.id].createdChannels.push(channel.id)
         database.child(`/privates/${after.guild.id}/createdChannels`).update({[channel.id]: "0"})

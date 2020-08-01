@@ -6,6 +6,27 @@ import {
     Client as BasicClient, PermissionString
 } from 'discord.js'
 
+type constructors =
+| ''
+| 'number'
+| 'string'
+| 'User'
+| 'GuildMember'
+| 'TextChannel'
+| 'VoiceChannel'
+
+export class CommandFile {
+    names: string[]
+    perms?: PermissionString[]
+    guild?: boolean
+    owner?: boolean
+    args?: {
+        [arg: string]: constructors
+    }
+    run: Function
+
+}
+
 //Better bot class
 class Client extends BasicClient {
     public commands: {
@@ -16,7 +37,9 @@ class Client extends BasicClient {
             run: Function,
             file: string,
             propertes: {
-                args: string[],
+                args: {
+                    [arg: string]: string
+                },
                 perms: PermissionString[],
                 guild: boolean,
                 owner: boolean
@@ -52,7 +75,7 @@ for (const file of eventFiles) {
 //Command handler
 const commandFiles = fs.readdirSync(__dirname + '/commands').filter(file => file.endsWith('.ts'))
 for (const file of commandFiles) {
-    const commandFile = require(`./commands/${file}`)
+    const commandFile = require(`./commands/${file}`).default
 
     //cmd
     client.files[file] = []
@@ -67,7 +90,7 @@ for (const file of commandFiles) {
                 run: cmd.run,
                 file: file,
                 propertes: {
-                    args: cmd.args ?? [],
+                    args: cmd.args ?? {},
                     perms: cmd.perms ?? [],
                     guild: cmd.guild ?? false,
                     owner: cmd.owner ?? false,
