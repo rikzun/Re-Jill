@@ -3,7 +3,7 @@ export {
     print, randint, hyphenation, 
     get, arrayDelValue, range,
     mth, arrayTypeChange, translatePerm,
-    botHasPermissions, strftime
+    botHasPermissions, strftime, format
     }
 
 function print(...data: any[]) {
@@ -103,4 +103,11 @@ function strftime(format: string, date: number):string {
     })
 
     return format
+}
+
+function format(text: string, ...arr: Array<any>):string {
+    for (let i = 0; i < arr.length ; i++) {
+        text = text.replace('{}', arr[i])
+    }
+    return text
 }

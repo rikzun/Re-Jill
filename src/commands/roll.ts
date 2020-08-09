@@ -5,7 +5,8 @@ import {print, mth, randint} from '../py'
 const commands: CommandFile[] = [
     {
         names: ['roll'],
-        args: {diceCount: 'number', diceSize: 'number', modSymbol: '', modNumber: 'number', highlight: 'number', 'description*': ''},
+        regexp: {exp: /^(\d*)?d(\d+)([-+*/])?(\d+)?( _\d+)?( .+)?/im, only: true, output: 'roll {} {} {} {}{}{}'},
+        args: {diceCount: 'number', diceSize: 'number', modSymbol: '', modNumber: 'number', highlight: '', 'description*': ''},
         run: async (message: Message, diceCount: number = 1, diceSize: number, modSymbol: string, modNumber: number, highlight: number, description: string) => {
             if (diceCount > 500 || diceSize > 1000) {
                 message.react('❌')
@@ -17,6 +18,8 @@ const commands: CommandFile[] = [
                 line1sum: number = 0,
                 line2: (string|number)[] = [],
                 line2hl: number = 0
+
+            if (highlight !== undefined) highlight = Number(String(highlight).replace('_', ''))
     
             //генерация чисел
             for (let i = diceCount; i > 0; i--) {

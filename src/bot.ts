@@ -17,14 +17,24 @@ type constructors =
 
 export class CommandFile {
     names: string[]
-    perms?: PermissionString[]
     guild?: boolean
     owner?: boolean
+    perms?: PermissionString[]
+    regexp?: {
+        exp: RegExp
+        only?: boolean
+        output?: string
+    }
     args?: {
         [arg: string]: constructors
     }
     run: Function
+}
 
+class RegexpBasic {
+    regexp: RegExp
+    only: boolean
+    output: string
 }
 
 //Better bot class
@@ -40,6 +50,7 @@ class Client extends BasicClient {
                 args: {
                     [arg: string]: string
                 },
+                only: boolean,
                 perms: PermissionString[],
                 guild: boolean,
                 owner: boolean
@@ -49,8 +60,10 @@ class Client extends BasicClient {
     public files: {
         [file: string]: string[]
     }
+    public regexp: RegexpBasic[]
     public events: string[]
     public owner: string
+    public version: string
     public prefix: string
 }
 
@@ -61,8 +74,9 @@ client.files = {}
 client.commands = {}
 client.events = []
 client.owner = '532935768918982656'
+client.version = '0.2.1'
 client.prefix = process.env.PREFIX
-
+client.regexp = []
 
 //Event handler
 const eventFiles = fs.readdirSync(__dirname + '/events').filter(file => file.endsWith('.ts'))
@@ -90,13 +104,24 @@ for (const file of commandFiles) {
                 run: cmd.run,
                 file: file,
                 propertes: {
+                    only: get(cmd.regexp, 'only', false),
                     args: cmd.args ?? {},
                     perms: cmd.perms ?? [],
                     guild: cmd.guild ?? false,
                     owner: cmd.owner ?? false,
                 }
             }
-        });
+        })
+
+        if (cmd.hasOwnProperty('regexp')) {
+            client.regexp.push(
+                {
+                    regexp: cmd.regexp.exp,
+                    only: cmd.regexp.only ?? false,
+                    output: cmd.regexp.output ?? false
+                }
+            )
+        }
     });
 }
 

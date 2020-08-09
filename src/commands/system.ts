@@ -10,10 +10,16 @@ const commands: CommandFile[] = [
         names: ['eval', 'e'],
         args: {'code*': ''},
         owner: true,
-        run: async (message: Message, code: string) => {
+        run: async (message: Message, code, py = require('../py')) => {
             try {
-                let evaled = await eval(code);
-                if (typeof evaled !== "string") evaled = inspect(evaled);
+                code = code.match(/```ts\n([\s\S]*?)```/)
+                if (!code) throw 'Отсутствует Markdown'
+
+                let evaled = await eval(`(async ()=> {${code[1]}})()`)
+                if (typeof evaled !== "string") evaled = inspect(evaled)
+                if (evaled.includes('```')) {
+                    evaled = evaled.replace(/```/g, '!!!')
+                }
                 
                 //разбиваем текст и собираем в буфер
                 let buffer = [],
@@ -27,31 +33,57 @@ const commands: CommandFile[] = [
                 
                 if (buffer.length == 0) buffer.push(evaled)
 
-                const sendedMessage = await message.channel.send('>>> ```ts\n' + buffer[page] + `\n\n::page ${page + 1}/${buffer.length}` + '```')
-                if (buffer.length == 1) return
+                function content():MessageEmbed {
+                    const Embed = new MessageEmbed()
+                        .setDescription(`\`\`\`ts\n${buffer[page]}\`\`\`\`\`\`autohotkey\n::page ${page + 1}/${buffer.length}\`\`\``)
 
-                await sendedMessage.react('⏮️')
-                await sendedMessage.react('⏪')
-                await sendedMessage.react('⏩')
-			    await sendedMessage.react('⏭️')
+                    return Embed
+                }
+
+                const sendedMessage = await message.channel.send(content())
+                if (buffer.length == 1) {
+                    await sendedMessage.react('🆗')
+                } else {
+                    await sendedMessage.react('⏮️')
+                    await sendedMessage.react('⏪')
+                    await sendedMessage.react('🆗')
+                    await sendedMessage.react('⏩')
+			        await sendedMessage.react('⏭️')
+                }
 
                 const filter = (reaction, user) => user.id == message.author.id
-                
                 const collector = sendedMessage.createReactionCollector(filter, { time: 120000, dispose: true });
                 const pageMove = 
                     async reaction => {
                         switch (reaction.emoji.name) {
+
+                            case '⏮️':
+                                if (page == 0) break
+                                page = 0
+                                sendedMessage.edit(content())
+                                break;
     
                             case '⏪':
                                 if (page == 0) break
                                 page--
-                                sendedMessage.edit('>>> ```ts\n' + buffer[page] + `\n\n::page ${page + 1}/${buffer.length}` + '```')
+                                sendedMessage.edit(content())
+                                break;
+
+                            case '🆗':
+                                collector.stop()
+                                await sendedMessage.delete()
                                 break;
 
                             case '⏩':
-                                if (page + 1 >= buffer.length) break
+                                if (page + 1 == buffer.length) break
                                 page++
-                                sendedMessage.edit('>>> ```ts\n' + buffer[page] + `\n\n::page ${page + 1}/${buffer.length}` +'```')
+                                sendedMessage.edit(content())
+                                break;
+
+                            case '⏭️':
+                                if (page == buffer.length - 1) break
+                                page = buffer.length - 1
+                                sendedMessage.edit(content())
                                 break;
                         }
                     }
@@ -63,7 +95,10 @@ const commands: CommandFile[] = [
                         .catch()
                 })
             } catch (error) {
-                message.channel.send('>>> ```ts\n' + error + '```')
+                const Embed = new MessageEmbed()
+                    .setDescription(`\`\`\`ts\n${error}\`\`\``)
+
+                message.channel.send(Embed)
             }
         }
     },
@@ -124,7 +159,7 @@ const commands: CommandFile[] = [
                         client.files[object].forEach(cmd => {
                             let commandReq
                             try {
-                                commandReq = require(`./${client.commands[cmd].file}`)[client.commands[cmd].index]
+                                commandReq = require(`./${client.commands[cmd].file}`).default[client.commands[cmd].index]
                             } catch (error) {
                                 commandReq = null
                             }
@@ -150,7 +185,7 @@ const commands: CommandFile[] = [
                     //load aliases and main cache
                     client.commands[object].names.forEach(alias => {
                         client.commands[alias].on = true
-                        client.commands[alias].run = require(`./${client.commands[alias].file}`)[client.commands[alias].index].run
+                        client.commands[alias].run = require(`./${client.commands[alias].file}`).default[client.commands[alias].index].run
                     })
                     message.channel.send('Команда `' + object + '` загружена.')
                     break;
@@ -207,7 +242,7 @@ const commands: CommandFile[] = [
                         client.files[object].forEach(cmd => {
                             let commandReq
                             try {
-                                commandReq = require(`./${client.commands[cmd].file}`)[client.commands[cmd].index]
+                                commandReq = require(`./${client.commands[cmd].file}`).default[client.commands[cmd].index]
                             } catch (error) {
                                 commandReq = null
                             }
@@ -232,7 +267,7 @@ const commands: CommandFile[] = [
                     //reload aliases and main cache
                     client.commands[object].names.forEach(alias => {
                         delete require.cache[require.resolve(`./${client.commands[alias].file}`)]
-                        client.commands[alias].run = require(`./${client.commands[alias].file}`)[client.commands[alias].index].run
+                        client.commands[alias].run = require(`./${client.commands[alias].file}`).default[client.commands[alias].index].run
                         
                     })
                     message.channel.send('Команда `' + object + '` перезагружена.')

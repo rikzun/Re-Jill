@@ -2,34 +2,37 @@ import {client} from '../bot'
 import {
     Client as TextChannel, Message, GuildMember, VoiceChannel, MessageEmbed, User
 } from 'discord.js'
-import { print, translatePerm, arrayTypeChange } from '../py';
+import { print, translatePerm, format } from '../py';
 
-const rollReg = /(\d*)?d(\d+)([-+*/])?(\d+)?( _\d+)?( .+)?/i
+const rollReg = /^(\d*)?d(\d+)([-+*/])?(\d+)?( _\d+)?( .+)?/im
 const types = {
     'string': String,
     'number': Number
 }
 
 client.on('message', async (message: Message) => {
-    //mention bot
-    if (message.content == '<@!608154725338185738>') {
-        message.content = './help'
-    }
-    
-    if (!message.content.startsWith(client.prefix)) return;
     if (message.author.bot) return;
+    if (!message.content.startsWith(client.prefix)) return;
+    
+    let content = message.content.substring(client.prefix.length).split(' ')
 
-    //roll
-    if (message.content.match(rollReg)) {
-        let rollContent = message.content.match(rollReg)
-        rollContent.shift()
-        message.content = `./roll ${rollContent[0] ?? ''} ${rollContent[1]} ${rollContent[2] ?? ''} ${rollContent[3] ?? ''}${(rollContent[4] ?? ' ').replace('_', '')}${rollContent[5] ?? ' '}`
-    }
-    const content = message.content.substring(client.prefix.length).split(' ')
+    //regexp handler 
+    let regexpTrigger = false
+    client.regexp.forEach(reg => {
+        let match = content.join(' ').match(reg.regexp)
+        if (match !== null) {
+            match.shift()
+            match.forEach(function(item, i) { if (item == undefined) match[i] = '' })
+
+            regexpTrigger = !regexpTrigger
+            content = format(reg.output, ...match).split(' ')
+        }
+    })
+
     const commandName = String(content.slice(0, 1))
     let messageArgs = content.splice(1)
-    
-    if (!client.commands.hasOwnProperty(commandName) || !client.commands[commandName].on) return;
+
+    if (!client.commands.hasOwnProperty(commandName) || !client.commands[commandName].on || client.commands[commandName].propertes.only !== regexpTrigger) return;
     const cmd = client.commands[commandName]
 
     //message author perm check

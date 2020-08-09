@@ -7,6 +7,7 @@ import {
 
 client.on('message', async (message: Message) => {
     if (!get(data, 'bumptimer', false)) return;
+    if (!message.guild) return;
     if (!get(get(data.bumptimer, message.guild.id, {}), 'channel', false)) return;
     if (!['315926021457051650', '464272403766444044'].includes(message.author.id)) return;
 

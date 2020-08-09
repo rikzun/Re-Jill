@@ -17,11 +17,11 @@ client.on('message', async (message: Message) => {
     if (message.content.startsWith('./') || message.content.startsWith('!')) return;
     if (message.content.includes('discord.gg')) {
 
-        //Добавляем в бан список
+        //add to ban list
         database.child(`/bans`).update({[message.author.id]: '0'})
         data.bans.push(message.author.id)
 
-        //Сообщение о бане на сервер поддержки
+        //ban message to moder guild
         const channel = await client.channels.fetch('693480909269368933') as TextChannel
         const msg = new MessageEmbed()
             .setThumbnail(message.author.avatarURL({format: "png", size: 512}))
@@ -33,7 +33,7 @@ client.on('message', async (message: Message) => {
             )
         channel.send(msg)
 
-        //Уведомление о бане
+        //ban alert
         const banMessage = new MessageEmbed()
             .setTitle('Вы были забанены')
             .setDescription('Бан выдан модератором Jill.\nПричина: Ссылка-приглашение')
@@ -44,7 +44,7 @@ client.on('message', async (message: Message) => {
         return;
     }
     
-    //Подкручиваем все вложения
+    //grab all attachments
     let attachments: string[] = new Array()
     message.attachments.forEach(v => {
         attachments.push(v.url)
@@ -66,18 +66,20 @@ client.on('message', async (message: Message) => {
     for (let guild in data.webhooks) {
         try {
             if (data.webhooks[guild].channelID == message.channel.id) continue;
+            if (client.guilds.cache.get(guild) == undefined) throw {code: '10015'};
+            
             const webhook = new WebhookClient(
                 data.webhooks[guild].id, data.webhooks[guild].token);
 
             let webhookName = message.author.username + '#' + message.author.discriminator
             message.content = originalContent
 
-            //Выделение модерации
+            //highlight mooders
             if (data.moderators.includes(message.author.id)) {
                 webhookName += '[M]'
             }
 
-            //Сообщение с доп инфой на сервере поддержки
+            //additional info for moders
             if (guild == '693480389586583553') {
                 message.content += messageInfo
             }
@@ -125,7 +127,7 @@ client.on('messageDelete', async (message: Message) => {
             return
         }
 
-        //Удаление сообщений на всех серверах
+        //delete message on all guilds
         for (let ch in data.messages[message.id]) {
             if (data.messages[message.id][ch] == message.id) continue;
 

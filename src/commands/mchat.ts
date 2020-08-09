@@ -41,6 +41,26 @@ const commands: CommandFile[] = [
                 )
             message.channel.send(Embed)
         }
-    },    
+    },
+    {
+        names: ['mstats'],
+        run: async (message: Message) => {
+            let mchatMemberCount = 0
+            for (let guildid in data.webhooks) {
+                const guild = client.guilds.cache.get(guildid)
+                if (!guild) continue
+
+                mchatMemberCount += guild.memberCount
+            }
+            const Embed = new MessageEmbed()
+                .setTitle('Статистика мультичата')
+                .setDescription(
+                    `\`\`\`Серверов: ${Object.keys(data.webhooks).length}\n` +
+                    `Банов: ${Object.keys(data.bans).length}\n` +
+                    `Пользователей: ${mchatMemberCount}\`\`\``
+                )
+            message.channel.send(Embed)
+        }
+    }
 ]
 export default commands
