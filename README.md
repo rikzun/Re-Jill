@@ -1,8 +1,5 @@
-# Re-Jill
+# Re:Jill
+Дискорд бот разрабатываемый на **typescript** с использованием **discord.js**.
 
-Страшный как мать Заки бот, написанный на тайшите. Всё ещё разрабатывается.
-
-[Discord разработчика][dis]
-
-[//]: #
-   [dis]: <https://discord.gg/7TsdvMD>
+[Сайт](https://rikzun.github.io/jill.html) с описанием команд.
+[Дискорд](https://discord.gg/ZqrSw65) разработчика.

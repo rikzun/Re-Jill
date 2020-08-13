@@ -67,15 +67,13 @@ class Client extends BasicClient {
     public prefix: string
 }
 
-config();
-const token = process.env.DISCORD_TOKEN
 export const client: Client = new Client()
 client.files = {}
 client.commands = {}
 client.events = []
 client.owner = '532935768918982656'
-client.version = '0.2.1'
-client.prefix = process.env.PREFIX
+client.version = '0.2.1d'
+client.prefix = './'
 client.regexp = []
 
 //Event handler
@@ -130,4 +128,4 @@ client.once('ready', () => {
     print('Jill готова к работе!')
 })
 
-client.login(token)
+client.login(process.env.DISCORD_TOKEN)

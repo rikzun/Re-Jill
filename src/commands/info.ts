@@ -187,9 +187,18 @@ const commands: CommandFile[] = [
                 guildFeatures[i] = localTranslate[e]
             })
 
+            let avatar: string
+            if (guild.icon == null) {
+                avatar = guild.icon
+            } else if (guild.icon.startsWith('a_')) {
+                avatar = guild.iconURL({format: 'gif', size: 1024})
+            } else {
+                avatar = guild.iconURL({format: 'png', size: 1024})
+            }
+
             const Embed = new MessageEmbed()
                 .setTitle(`Информация о сервере ${guild.name}`)
-                .setThumbnail(guild.iconURL({format: 'png', size: 512}))
+                .setThumbnail(avatar)
                 .addFields(
                     {
                         name: 'Общая информация', 

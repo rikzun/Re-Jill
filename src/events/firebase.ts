@@ -2,10 +2,13 @@ import * as firebase from 'firebase-admin';
 import {get} from '../py'
 import {print} from '../py'
 
-const serviceAccount = require('../../fire_account.json')
 firebase.initializeApp({
-    credential: firebase.credential.cert(serviceAccount),
-    databaseURL: `https://${serviceAccount.project_id}.firebaseio.com`
+    credential: firebase.credential.cert({
+        projectId: "bot-jill",
+        clientEmail: "firebase-adminsdk-ossz9@bot-jill.iam.gserviceaccount.com",
+        privateKey: process.env.FIREBASE_TOKEN.replace(/\\n/g, '\n')
+    }),
+    databaseURL: `https://bot-jill.firebaseio.com`
 });
 
 export const database = firebase.database().ref()
