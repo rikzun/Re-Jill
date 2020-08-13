@@ -21,7 +21,7 @@ const commands: CommandFile[] = [
 
             if (highlight !== undefined) highlight = Number(String(highlight).replace('_', ''))
     
-            //генерация чисел
+            //number gen
             for (let i = diceCount; i > 0; i--) {
                 const generated: number = randint(1, diceSize)
 

@@ -21,7 +21,7 @@ const commands: CommandFile[] = [
                     evaled = evaled.replace(/```/g, '!!!')
                 }
                 
-                //разбиваем текст и собираем в буфер
+                //break the text into parts
                 let buffer = [],
                     page = 0
 

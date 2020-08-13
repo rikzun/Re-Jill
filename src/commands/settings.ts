@@ -41,13 +41,13 @@ const commands: CommandFile[] = [
                                 break;
                             }
     
-                            //удаление мейн канала
+                            //delete main channel
                             try {
                                 const original = await client.channels.fetch(data.privates[message.guild.id].original) as GuildChannel
                                 await original.delete()
                             } catch (error) {}
     
-                            //удаляем созданные каналы
+                            //delete created channels
                             if (get(data.privates[message.guild.id], 'createdChannels', false)) {
                                 for (let ch in data.privates[message.guild.id].createdChannels) {
                                     try {
@@ -59,7 +59,7 @@ const commands: CommandFile[] = [
                                 }
                             }
     
-                            //отчистка инфы
+                            //clear data
                             delete data.privates[message.guild.id]
                             database.child(`/privates/${message.guild.id}`).remove()
     

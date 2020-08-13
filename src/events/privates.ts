@@ -30,10 +30,10 @@ client.on('voiceStateUpdate', async (before: VoiceState, after: VoiceState) => {
 setInterval(() => {
     (async() => {
 
-        //удаление созданных каналов
+        //delete created channels
         for (let guild in data.privates) {
 
-            //проверка на существование original
+            //check main channel
             try {
                 await client.channels.fetch(data.privates[guild].original) as VoiceChannel
             } catch (error) {
@@ -44,7 +44,7 @@ setInterval(() => {
 
             if (!get(data.privates[guild], 'createdChannels', false)) continue;
 
-            //удаление каналов
+            //delete channels
             data.privates[guild].createdChannels.forEach((v, i, a) => {
                 (async()=> {
                     try {

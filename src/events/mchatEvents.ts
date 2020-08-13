@@ -4,7 +4,7 @@ import { get, print } from '../py';
 setInterval(() => {
     (async() => {
 
-        //Очистка очереди серверов через неделю
+        //clearing the server queue after a week
         if ( get(data, 'queue', false) ) {
             for (const guild in data.queue) {
                 const create = Number(get(get(data.queue, guild), 'create'))
@@ -16,7 +16,7 @@ setInterval(() => {
             }
         }
         
-        //Отчистка сообщений при превышении количества в 100 штук
+        //clearing messages
         if ( Object.keys(get(data, 'messages')).length > 100 ) {
             let count = Object.keys(data.messages).length
             while (count > 100) {

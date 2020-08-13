@@ -6,6 +6,7 @@ client.on('voiceStateUpdate', async (before: VoiceState, after: VoiceState) => {
     if (before.guild.id !== '606996193733640202') return;
     if (after.guild.id !== '606996193733640202') return;
 
+    //need to refactor
     if (after.channelID == null) {
         after.member.roles.remove(['666374501151539243'])
         return

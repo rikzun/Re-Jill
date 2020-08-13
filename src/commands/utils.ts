@@ -9,9 +9,6 @@ const commands: CommandFile[] = [
         guild: true,
         args: {amount: 'number', 'member?': 'GuildMember'},
         run: async (message: Message, amount: number, member?: GuildMember) => {
-            if (!member) {
-                message.channel.messages.fetch({ limit: 100 })
-            }
         }
     }
 ]
