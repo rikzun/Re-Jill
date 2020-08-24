@@ -14,8 +14,8 @@ client.on('voiceStateUpdate', async (before: VoiceState, after: VoiceState) => {
             after.member.user.username, {
                 type: 'voice', userLimit: 1, parent: category
             })
-        channel.lockPermissions()
-        channel.updateOverwrite(after.member.id, {'ADMINISTRATOR': true})
+        await channel.lockPermissions()
+        await channel.updateOverwrite(after.member.id, {'ADMINISTRATOR': true})
 
         data.privates[after.guild.id].createdChannels.push(channel.id)
         database.child(`/privates/${after.guild.id}/createdChannels`).update({[channel.id]: "0"})
@@ -37,9 +37,13 @@ setInterval(() => {
             try {
                 await client.channels.fetch(data.privates[guild].original) as VoiceChannel
             } catch (error) {
-                delete data.privates[guild]
-                database.child(`/privates/${guild}`).remove()
-                continue
+                switch (error['code']) {
+                    case '10003':
+                        delete data.privates[guild]
+                        database.child(`/privates/${guild}`).remove()
+                        continue
+
+                }
             }
 
             if (!get(data.privates[guild], 'createdChannels', false)) continue;

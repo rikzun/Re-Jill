@@ -70,8 +70,12 @@ const commands: CommandFile[] = [
                                 break;
 
                             case '🆗':
-                                collector.stop()
+                                try {
+                                    collector.stop()
+                                } catch (error) {}
+                                
                                 await sendedMessage.delete()
+                                    .catch()
                                 break;
 
                             case '⏩':
