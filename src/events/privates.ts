@@ -15,7 +15,7 @@ client.on('voiceStateUpdate', async (before: VoiceState, after: VoiceState) => {
                 type: 'voice', userLimit: 1, parent: category
             })
         await channel.lockPermissions()
-        await channel.updateOverwrite(after.member.id, {'MANAGE_CHANNELS': true, 'MANAGE_GUILD': true})
+        await channel.updateOverwrite(after.member.id, {'MANAGE_CHANNELS': true, 'MANAGE_ROLES': true})
 
         data.privates[after.guild.id].createdChannels.push(channel.id)
         database.child(`/privates/${after.guild.id}/createdChannels`).update({[channel.id]: "0"})
