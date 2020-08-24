@@ -72,7 +72,7 @@ client.files = {}
 client.commands = {}
 client.events = []
 client.owner = '532935768918982656'
-client.version = '0.2.1d'
+client.version = '0.2.1d3'
 client.prefix = './'
 client.regexp = []
 
