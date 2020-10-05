@@ -1,12 +1,13 @@
-import {client, CommandFile} from '../bot'
-import {Message, GuildMember, User} from 'discord.js'
-import {print, get} from '../py'
+import { fileCommands } from '../bot'
+import { Message } from 'discord.js'
+import { wait, print } from '../utils'
 
-const commands: CommandFile[] = [
+const commands: fileCommands[] = [
     {
-        names: ['tt'],
-        owner: true,
-        run: async (message: Message, ) => {
+        aliases: ['tt'],
+        ownerOnly: true,
+        run: async (message: Message) => {
+            
         }
     }
 ]
