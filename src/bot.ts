@@ -1,5 +1,6 @@
 import { print } from './utils'
 import { Client as BasicClient } from 'discord.js'
+import * as path from 'path'
 import * as fs from 'fs' 
 
 //Better bot class
@@ -39,13 +40,13 @@ client.prefix = './'
 client.commands = {}
 
 //event handler
-const eventFiles = fs.readdirSync(__dirname + '/events').map(f => __dirname + '\\events\\' + f)
+const eventFiles = fs.readdirSync(__dirname + '/events').map(f => path.join(__dirname, 'events', f))
 for (const file of eventFiles) {
     require(file)
 }
 
 //command handler
-const commandFiles = fs.readdirSync(__dirname + '/commands').map(f => __dirname + '\\commands\\' + f)
+const commandFiles = fs.readdirSync(__dirname + '/commands').map(f => path.join(__dirname, 'commands', f))
 for (const file of commandFiles) {
     const commandsArray = require(file).default
     for (const command of commandsArray) {
