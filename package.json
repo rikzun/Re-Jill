@@ -3,7 +3,8 @@
   "version": "0.0.1",
   "main": "",
   "scripts": {
-    "run": "ts-node src/bot.ts"
+    "build": "tsc",
+    "start": "node dist/bot.js"
   },
   "author": "rikzun",
   "license": "MIT",

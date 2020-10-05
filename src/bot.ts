@@ -62,8 +62,7 @@ for (const file of commandFiles) {
 }
 
 client.once('ready', () => {
-    // client.user.setActivity('./help', { type: 'WATCHING' })
     print('Jill готова к работе!')
 })
 
-client.login(process.env.DISCORD_TOKEN)
+client.login(require('../token.json').DISCORD_TOKEN)
