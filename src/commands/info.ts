@@ -1,17 +1,22 @@
 import { client, fileCommands } from '../bot'
 import { Message, MessageEmbed, GuildMember } from 'discord.js'
-import { newEmbed, print } from '../utils'
+import { newEmbed, print, LocalTranslate } from '../utils'
 
-const translate = {
-    'desktop': 'ПК',
+const translateData = new LocalTranslate({
+    'desktop': 'Компьютер',
     'web': 'Браузер',
-    'mobile': 'Телефон'
-}
+    'mobile': 'Телефон',
+    'CUSTOM_STATUS': 'Статус ',
+    'PLAYING': 'Играет в ',
+    'LISTENING': 'Слушает ',
+    'WATCHING': 'Смотрит '
+})
 
 const commands: fileCommands[] = [
     {
         aliases: ['user'],
         args: {'member*': 'GuildMember'},
+        guildOnly: true,
         run: async (message: Message, members: GuildMember[] = [message.member]) => {
             if (members == null) {
                 const Embed = newEmbed()
@@ -40,7 +45,8 @@ const commands: fileCommands[] = [
                             collector.stop()
                         } else {
                             const Embed = newEmbed()
-                                .setDescription('🚫 Ошибка')
+                                .setTitle('🚫 Ошибка')
+                                .setDescription('Попробуйте ещё раз.')
                             message.channel.send(Embed)
                         }
                     }
@@ -50,9 +56,11 @@ const commands: fileCommands[] = [
             function sendMessage(): void {
                 const member = members[0]
                 const presence = member.user.presence
-                // print(presence)
-                const platform = Object.keys(presence.clientStatus ?? []).map(e => translate[e])
                 const description = []
+                const activities = []
+
+                let platform = Object.keys(presence.clientStatus ?? []).map(e => translateData.translate(e))
+                if (member.user.bot) platform = ['Бот']
 
                 description[0] = []
                     .add(`Псевдоним: ${member.nickname}`, member.nickname)
@@ -61,52 +69,37 @@ const commands: fileCommands[] = [
                     .add(`Подключение: ${new Date(member.joinedTimestamp).strftime('%d.%m.%y %H:%M:%S')}`)
                     .add(`Платформа: ${platform.join(', ')}`, platform.length)
                     .add(`ID: ${member.id}`)
-                
+
+                for (const activity of presence.activities) {
+                    if (activity.type == 'CUSTOM_STATUS') {
+                        activity.name = activity.state
+                        activity.state = null
+                    }
+
+                    const activityForm = []
+                        .add(translateData.translate(activity.type) + activity.name)
+                        .add(activity.details, activity.details)
+                        .add(activity.state, activity.state)
+                    activities.push(activityForm.join('\n'))
+                }
+
                 const Embed = newEmbed()
                     .setThumbnail(member.user.displayAvatarURL({format: 'png', dynamic: true, size: 4096}))
                     .addField('Общее', '```\n' + description[0].join('\n') + '```')
+
+                if (activities.length) Embed.addField('Активность', activities.map(a => '```\n' + a + '```').join(''))
+
                 message.channel.send(Embed)
             }
+        }
+    },
+    {
+        aliases: ['help', '?'],
+        run: async (message: Message) => {
+            const Embed = newEmbed()
+                .setDescription('Информация о командах описана на [сайте](https://github.com/RikZun/Re-Jill/wiki) бота')
 
-        
-            // if (presences) {
-            //     presences.activities.forEach(e => {
-            //         if (e.type == 'CUSTOM_STATUS') {
-            //             customStatus = e.state
-            //             return
-            //         }
-            //         activities += `${localTranslate[e.type]} ${e.name}\n`
-            //     })
-            // }
-
-            // const Embed = new MessageEmbed()
-            //     .setThumbnail(member.user.avatarURL({format: 'png', dynamic: true, size: 4096}))
-            //     .addFields(
-            //         {
-            //             name: 'Общее',
-            //             value:
-            //             '```\n' +
-            //             `Пользователь: ${member.user.tag}\n` +
-            //             `Регистрация: ${regAt}\n` +
-            //             `Подключение: ${joinedAt}\n` +
-            //             `ID: ${member.id}\n` +
-            //             '```'
-            //         }
-            //     )
-            // if (clientStatus) {
-            //     Embed.addField(
-            //         'Платформы',
-            //         '```\n' +
-            //         `Компьютер: ${localTranslate[clientStatus.desktop ?? '???']}\n` +
-            //         `Веб: ${localTranslate[clientStatus.web ?? '???']}\n` +
-            //         `Смартфон: ${localTranslate[clientStatus.mobile ?? '???']}\n` +
-            //         '```'
-            //     )
-            // }
-            // if (customStatus) Embed.addField('Кастомный статус', `\`\`\`\n${customStatus}\`\`\``)
-            // if (activities) Embed.addField('Активность', `\`\`\`\n${activities}\`\`\``)
-                
-            // message.channel.send(Embed)
+            message.channel.send(Embed)
         }
     }
 ]

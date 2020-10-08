@@ -4,7 +4,8 @@
   "main": "",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/bot.js"
+    "start": "node dist/bot.js",
+    "ts-start": "ts-node src/bot.ts"
   },
   "author": "rikzun",
   "license": "MIT",

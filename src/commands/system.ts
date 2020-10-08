@@ -11,12 +11,12 @@ const commands: fileCommands[] = [
         ownerOnly: true,
         run: async (message: Message, input: string) => {
             try {
-                const code = input.match(/```ts\n([\s\S]*?)```/)
-                if (code == null) throw 'Отсутствует Markdown'
+                const code = input.match(/```ts\n([\s\S]*?)```/)[1]
+                if (!code) throw 'Отсутствует Markdown'
 
                 const imports = 'discord = require("discord.js"), guild = message.guild, client = message.client, utils = require("../utils")'
-                let evaled = inspect(await eval('(async(' + imports + ')=>{' + transpile(code[1]) + '})()'))
-                if (!code[1].includes('return')) return
+                let evaled = inspect(await eval('(async(' + imports + ')=>{' + transpile(code) + '})()'))
+                if (!code.includes('return')) return
                 if (evaled.includes('```')) evaled = evaled.replace(/```/g, '~~~')
 
                 let page = 0

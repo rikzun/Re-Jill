@@ -1,4 +1,4 @@
-export { print, newEmbed, wait, randint }
+export { print, newEmbed, wait, randint, LocalTranslate }
 import { MessageEmbed } from 'discord.js'
 
 declare global {
@@ -8,6 +8,7 @@ declare global {
         indexOfAll(elem: string): number[]
         replaceIndex(index: number, replacement: string): string
         isNumber(): boolean
+        matchf(regexp: RegExp): null | string[]
     }
     interface Date {
         strftime(format: string): string
@@ -52,6 +53,10 @@ String.prototype.includesAll = function (...symbols: string[]): boolean {
     return false
 }
 
+String.prototype.matchf = function (regexp: RegExp): null | string[] {
+    return this.match(regexp)?.slice(1)
+}
+
 Date.prototype.strftime = function(format: string):string {
     let date = this
     if (date < 0) date = 0
@@ -93,6 +98,19 @@ function newEmbed(): MessageEmbed {
 
 function wait(ms: number): Promise<Function> {
     return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+class LocalTranslate {
+    data: object
+
+    constructor(text: object) {
+        this.data = text
+    }
+
+    translate(word: string): string {
+        if (this.data.hasOwnProperty(word)) return this.data[word]
+        return word
+    }
 }
 
 function print(...data: any[]): void {

@@ -16,7 +16,7 @@ client.on('message', async (message: Message) => {
     const command = client.commands[messageCommandName]
 
     if (!command.status) return
-    if (message.guild !== null && command.guildOnly) {
+    if (message.guild == null && command.guildOnly) {
         const Embed = newEmbed()
             .setDescription('🚫 Только для сервера.')
 

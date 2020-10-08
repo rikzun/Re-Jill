@@ -4,9 +4,10 @@ import { print, newEmbed } from '../utils'
 
 client.on('message', async (message: Message) => {
     if (message.author.bot) return
-    if (!message.content.startsWith('https://discordapp.com/channels/')) return
-    const messageLinkRegex = message.content.match(/https:\/\/discordapp\.com\/channels\/(\d+)\/(\d+)\/(\d+)/)
-    const [, guildID, channelID, messageID] = messageLinkRegex
+    const messageLinkRegex = message.content.matchf(/https?:\/\/(?:canary\.)?discord(?:app)?\.com\/channels\/(\d+)\/(\d+)\/(\d+)/)
+
+    if (!messageLinkRegex) return
+    const [guildID, channelID, messageID] = messageLinkRegex
 
     let channel: TextChannel
     let linkMessage: Message
@@ -16,7 +17,7 @@ client.on('message', async (message: Message) => {
         linkMessage = await channel.messages.fetch(messageID)
     } catch (error) { return }
 
-    let content = linkMessage.cleanContent
+    let content = linkMessage.cleanContent.replace(/@/g, '\\@')
     const embeds = []
 
     if (linkMessage.attachments.size > 0) embeds.push(...linkMessage.attachments.values())
@@ -46,14 +47,25 @@ client.on('message', async (message: Message) => {
     }
 
     const Embed = newEmbed()
-        .setTimestamp(linkMessage.createdTimestamp)
         .setAuthor(
             linkMessage.author.username, 
             linkMessage.author.displayAvatarURL({format: 'png', dynamic: true, size: 4096})
         )
+        .setTimestamp(linkMessage.createdTimestamp)
+    
+    const reactions = linkMessage.reactions.cache
+    if (reactions.size > 0) {
+        const emojis = []
+        for (const Emoji of reactions.values()) {
+            if (!Emoji.emoji.id) { emojis.push({rc: Emoji.emoji.name, count: Emoji.count}); continue }
+                
+            emojis.push({rc: `<:${Emoji.emoji.name}:${Emoji.emoji.id}>`, count: Emoji.count})
+        }
+        Embed.setDescription(emojis.map(o => `${o.rc} - ${o.count}`))
+    }
 
     try {
         await message.channel.send(content, embeds)
-    await message.channel.send(Embed)
+        await message.channel.send(Embed)
     } catch (error) {}
 })
