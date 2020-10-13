@@ -5,6 +5,7 @@ import * as fs from 'fs'
 
 //Better bot class
 class Client extends BasicClient {
+    public devmod: boolean
     public owner: string
     public prefix: string
     public version: string
@@ -34,14 +35,21 @@ export class fileCommands {
 }
 
 export const client: Client = new Client()
+client.devmod = false
 client.owner = '532935768918982656'
 client.version = '0.2.1d3'
 client.prefix = './'
 client.commands = {}
 
+if (process.platform !== 'linux') {
+    client.devmod = true
+    client.prefix = '//'
+}
+
 //event handler
 const eventFiles = fs.readdirSync(__dirname + '/events').map(f => path.join(__dirname, 'events', f))
 for (const file of eventFiles) {
+    if (client.devmod) if (!file.includesAll('commandHandler.ts')) continue
     require(file)
 }
 

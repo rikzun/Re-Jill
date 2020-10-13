@@ -1,6 +1,6 @@
 import { Message, MessageEmbed } from 'discord.js'
 import { inspect } from "util"
-import { client, fileCommands } from '../bot'
+import { fileCommands } from '../bot'
 import { print, newEmbed } from '../utils'
 import { transpile } from 'typescript'
 
@@ -14,7 +14,7 @@ const commands: fileCommands[] = [
                 const code = input.match(/```ts\n([\s\S]*?)```/)[1]
                 if (!code) throw 'Отсутствует Markdown'
 
-                const imports = 'discord = require("discord.js"), guild = message.guild, client = message.client, utils = require("../utils")'
+                const imports = 'discord = require("discord.js"), utils = require("../utils")'
                 let evaled = inspect(await eval('(async(' + imports + ')=>{' + transpile(code) + '})()'))
                 if (!code.includes('return')) return
                 if (evaled.includes('```')) evaled = evaled.replace(/```/g, '~~~')

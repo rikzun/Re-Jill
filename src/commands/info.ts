@@ -6,7 +6,7 @@ const translateData = new LocalTranslate({
     'desktop': 'Компьютер',
     'web': 'Браузер',
     'mobile': 'Телефон',
-    'CUSTOM_STATUS': 'Статус ',
+    'CUSTOM_STATUS': 'Статус: ',
     'PLAYING': 'Играет в ',
     'LISTENING': 'Слушает ',
     'WATCHING': 'Смотрит '
@@ -72,8 +72,8 @@ const commands: fileCommands[] = [
 
                 for (const activity of presence.activities) {
                     if (activity.type == 'CUSTOM_STATUS') {
-                        activity.name = activity.state
-                        activity.state = null
+                        activities.push([translateData.translate(activity.type) + activity.state])
+                        continue
                     }
 
                     const activityForm = []

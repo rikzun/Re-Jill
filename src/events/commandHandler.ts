@@ -1,5 +1,5 @@
 import { client } from '../bot'
-import { Message, MessageEmbed } from 'discord.js'
+import { Message } from 'discord.js'
 import { print, newEmbed } from '../utils'
 
 client.on('message', async (message: Message) => {

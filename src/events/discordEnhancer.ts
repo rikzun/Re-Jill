@@ -1,13 +1,17 @@
 import { client } from '../bot'
-import { Message, MessageAttachment, MessageEmbed, TextChannel } from 'discord.js'
+import { Message, MessageAttachment, TextChannel } from 'discord.js'
 import { print, newEmbed } from '../utils'
 
 client.on('message', async (message: Message) => {
     if (message.author.bot) return
-    const messageLinkRegex = message.content.matchf(/https?:\/\/(?:canary\.)?discord(?:app)?\.com\/channels\/(\d+)\/(\d+)\/(\d+)/)
+    const messageLinkRegex = message.content.match(/https?:\/\/(?:canary\.)?discord(?:app)?\.com\/channels\/(\d+)\/(\d+)\/(\d+)/)
 
     if (!messageLinkRegex) return
-    const [guildID, channelID, messageID] = messageLinkRegex
+    const [full, guildID, channelID, messageID] = messageLinkRegex
+
+    //escape char trigger
+    const index = message.content.indexOf(full)
+    if (index != 0) if (message.content[index - 1] == '<' && message.content[index + full.length] == '>') return
 
     let channel: TextChannel
     let linkMessage: Message
@@ -19,6 +23,13 @@ client.on('message', async (message: Message) => {
 
     let content = linkMessage.cleanContent.replace(/@/g, '\\@')
     const embeds = []
+
+    if (content.length > 2000) {
+        const Embed = newEmbed()
+            .setDescription('🚫 Сообщение содержит более 2к символов.')
+        message.channel.send(Embed)
+        return
+    }
 
     if (linkMessage.attachments.size > 0) embeds.push(...linkMessage.attachments.values())
     for (const embed of linkMessage.embeds) {

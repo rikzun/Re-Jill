@@ -10,9 +10,10 @@
   "author": "rikzun",
   "license": "MIT",
   "dependencies": {
-    "dotenv": "^8.2.0",
-    "discord.js": "12.3.1",
     "@types/node": "^14.0.5",
+    "discord.js": "12.3.1",
+    "dotenv": "^8.2.0",
+    "nedb": "^1.8.0",
     "ts-node": "^8.10.1",
     "typescript": "^3.8.3"
   },
