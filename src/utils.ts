@@ -1,4 +1,4 @@
-export { print, newEmbed, wait, randint, LocalTranslate }
+export { print, newEmbed, wait, randint, LocalTranslate, mth }
 import { MessageEmbed } from 'discord.js'
 
 declare global {
@@ -15,21 +15,25 @@ declare global {
     }
     interface Array<T> {
         add(elem: any, check?: any): this
+        changeType(type: Function, force?: boolean): any[]
     }
 }
 
-String.prototype.endsWithAll = function (...symbols: string[]): boolean {
+String.prototype.endsWithAll = 
+function (...symbols: string[]): boolean {
     for (let i = 0; i < symbols.length; i++) {
         if (this.endsWith(symbols[i])) return true
     }
     return false
 }
 
-String.prototype.replaceIndex = function(index: number, replacement: string): string {
+String.prototype.replaceIndex = 
+function(index: number, replacement: string): string {
     return this.substr(0, index) + replacement + this.substr(index + replacement.length)
 }
 
-String.prototype.indexOfAll = function (elem: string): number[] {
+String.prototype.indexOfAll = 
+function (elem: string): number[] {
     let text = this.repeat(1)
     const amount = text.match(new RegExp(elem, 'g')).length
     const indices = []
@@ -42,22 +46,26 @@ String.prototype.indexOfAll = function (elem: string): number[] {
     return indices
 }
 
-String.prototype.isNumber = function (): boolean {
+String.prototype.isNumber = 
+function (): boolean {
     return /^\d+$/gm.test(this)
 }
 
-String.prototype.includesAll = function (...symbols: string[]): boolean {
+String.prototype.includesAll = 
+function (...symbols: string[]): boolean {
     for (let i = 0; i < symbols.length; i++) {
         if (this.includes(symbols[i])) return true
     }
     return false
 }
 
-String.prototype.matchf = function (regexp: RegExp): null | string[] {
+String.prototype.matchf = 
+function (regexp: RegExp): null | string[] {
     return this.match(regexp)?.slice(1)
 }
 
-Date.prototype.strftime = function(format: string):string {
+Date.prototype.strftime = 
+function(format: string):string {
     let date = this
     if (date < 0) date = 0
 
@@ -83,9 +91,20 @@ Date.prototype.strftime = function(format: string):string {
     return format
 }
 
-Array.prototype.add = function (elem: any, check: any = true): any[] {
+Array.prototype.add = 
+function (elem: any, check: any = true): any[] {
     if (check) this.push(elem)
     return this
+}
+
+Array.prototype.changeType = 
+function (type: Function, force: boolean = false): any[] {
+  const arr = []
+  for (const value of this) {
+    if (force && !value?.isNumber()) { arr.push(value); continue}
+    arr.push(type(value))
+  }
+  return arr
 }
 
 // --------------------
@@ -120,4 +139,15 @@ function print(...data: any[]): void {
 
 function randint(min: number, max: number) {
     return Math.floor(Math.random() * (max - min + 1) + min)
+}
+
+function mth(a: number, operator: string, b: number): number {
+    if (!a || !operator || !b) return undefined;
+    switch (operator) {
+        case '+': return a + b;
+        case '-': return a - b;
+        case '*': return a * b;
+        case '/': return a / b;
+        default: return undefined
+    }
 }
