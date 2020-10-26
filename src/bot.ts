@@ -49,7 +49,7 @@ if (process.platform !== 'linux') {
 //event handler
 const eventFiles = fs.readdirSync(__dirname + '/events').map(f => path.join(__dirname, 'events', f))
 for (const file of eventFiles) {
-    if (client.devmod) if (!file.includesAll('commandHandler.ts', 'roll.ts')) continue
+    if (client.devmod) if (!file.includesAll('commandHandler.ts')) continue
     require(file)
 }
 

@@ -21,7 +21,9 @@ client.on('message', async (message: Message) => {
         linkMessage = await channel.messages.fetch(messageID)
     } catch (error) { return }
 
-    let content = linkMessage.cleanContent.replace(/@/g, '\\@')
+    let content = linkMessage.cleanContent
+        .replace(/@everyone/g, '`@everyone`')
+        .replace(/@here/g, '`@here`')
     const embeds = []
 
     if (content.length > 2000) {
@@ -57,7 +59,7 @@ client.on('message', async (message: Message) => {
         return
     }
 
-    const Embed = newEmbed()
+    const infoEmbed = newEmbed()
         .setAuthor(
             linkMessage.author.username, 
             linkMessage.author.displayAvatarURL({format: 'png', dynamic: true, size: 4096})
@@ -72,11 +74,11 @@ client.on('message', async (message: Message) => {
                 
             emojis.push({rc: `<:${Emoji.emoji.name}:${Emoji.emoji.id}>`, count: Emoji.count})
         }
-        Embed.setDescription(emojis.map(o => `${o.rc} - ${o.count}`))
+        infoEmbed.setDescription(emojis.map(o => `${o.rc} - ${o.count}`))
     }
 
     try {
         await message.channel.send(content, embeds)
-        await message.channel.send(Embed)
+        await message.channel.send(infoEmbed)
     } catch (error) {}
 })
