@@ -1,4 +1,4 @@
-export { print, newEmbed, wait, randint, LocalTranslate, mth }
+export { print, newEmbed, wait, randint, LocalTranslate }
 import { MessageEmbed } from 'discord.js'
 
 declare global {
@@ -48,7 +48,7 @@ function (elem: string): number[] {
 
 String.prototype.isNumber = 
 function (): boolean {
-    return /^\d+$/gm.test(this)
+    return /^\d*[.,]?\d+$/gm.test(this)
 }
 
 String.prototype.includesAll = 
@@ -57,11 +57,6 @@ function (...symbols: string[]): boolean {
         if (this.includes(symbols[i])) return true
     }
     return false
-}
-
-String.prototype.matchf = 
-function (regexp: RegExp): null | string[] {
-    return this.match(regexp)?.slice(1)
 }
 
 Date.prototype.strftime = 
@@ -97,16 +92,6 @@ function (elem: any, check: any = true): any[] {
     return this
 }
 
-Array.prototype.changeType = 
-function (type: Function, force: boolean = false): any[] {
-  const arr = []
-  for (const value of this) {
-    if (force && !value?.isNumber()) { arr.push(value); continue}
-    arr.push(type(value))
-  }
-  return arr
-}
-
 // --------------------
 //  end prototype adds
 // --------------------
@@ -138,16 +123,8 @@ function print(...data: any[]): void {
 }
 
 function randint(min: number, max: number) {
+    if (min > max || min < 0) return 0
+    if (!Number.isInteger(min) || !Number.isInteger(max)) {
+        return Math.random() * (max - min + 0.1) + min}
     return Math.floor(Math.random() * (max - min + 1) + min)
-}
-
-function mth(a: number, operator: string, b: number): number {
-    if (!a || !operator || !b) return undefined;
-    switch (operator) {
-        case '+': return a + b;
-        case '-': return a - b;
-        case '*': return a * b;
-        case '/': return a / b;
-        default: return undefined
-    }
 }
