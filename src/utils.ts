@@ -124,7 +124,5 @@ function print(...data: any[]): void {
 
 function randint(min: number, max: number) {
     if (min > max || min < 0) return 0
-    if (!Number.isInteger(min) || !Number.isInteger(max)) {
-        return Math.random() * (max - min + 0.1) + min}
     return Math.floor(Math.random() * (max - min + 1) + min)
 }

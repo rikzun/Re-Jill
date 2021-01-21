@@ -2,81 +2,161 @@ import { client } from '../bot'
 import { Message } from 'discord.js'
 import { print, newEmbed, randint } from '../utils'
 
-const regexpRoll = /^(?:(\d*[.,]?\d+)?d(\d*[.,]?\d+))((?: ?=?[+\-*\/] ?(?:(?:\d*[.,]?\d+)?d?(?:\d*[.,]?\d+)))*)(?: ?_(>|>=|=|<=|<)(\d*[.,]?\d+))?(?: ([\s\S]*))?$/
+const regexpRoll = /^(?:(\d*)?d(\d*))(?: ?\((\d*)\))?((?: ?=?[+\-*\/] ?(?:(?:\d*)?d?(?:\d*.?\d+)))*)(?: ?_(>|>=|=|<=|<)(\d*\.?\d+))?(?: ([\s\S]*))?$/
+const regexpMod = /(=?[+\-*\/])(?:(?:(\d*)d)?(\d*\.?\d+)?)/g
 
 class Roll {
-    dNum: number
+    dNumber: number
     dEdges: number
+    repeat: number
     mod: string
-    hExp: string
-    hNum: number
+    hSymbol: string
+    hNumber: number
     text: string
 
-    err: boolean
+    arr: number[][]
+    output: string[][]
+    lastMod: {symbol: string, value: number}[]
+    sum: number[]
+    hgtlsum: number[]
 
-    sum: number
-    numbers: number[]
-    mods: RollMod[]
-    output: string[]
+    error: boolean
 
     constructor(match: RegExpMatchArray) {
-        this.dNum = Number(match[1])
-        this.dEdges = Number(match[2])
-        this.mod = match[3]
-        this.hExp = match[4]
-        this.hNum = Number(match[5])
-        this.text = match[6]
+        this.dNumber = Number(match[1] ?? 1)
+        this.dEdges = Number(match[2] ?? 0)
+        this.repeat = Number(match[3] ?? 1)
+        this.mod = match[4]
+        this.hSymbol = match[5]
+        this.hNumber = Number(match[6])
+        this.text = match[7]
 
-        this.err = false
-
-        if (Number.isNaN(this.dNum)) this.dNum = 1
-        if (this.mod) this.mod = this.mod.replace(/\s+/g, '')
-
-        this.sum = 0
-        this.numbers = []
-        this.mods = []
+        this.arr = []
         this.output = []
+        this.lastMod = []
+        this.sum = []
+        this.hgtlsum = []
 
+        this.mod = this.mod.replace(/\s+/g, '')
         this.start()
     }
 
     start() {
-        if (!this.dNum || !this.dEdges || this.dNum > 1000 || this.dEdges > 1000) { this.err = true; return }
-        for (let i = 0; i < this.dNum; i++) {
-            this.numbers.push(randint(1, this.dEdges))
-        }
+        if (!this.dNumber || !this.dEdges || this.dNumber > 1000 || this.dEdges > 1000|| this.repeat > 20) { this.error = true; return }
 
+        this.gen()
         if (this.mod) this.modCalculate()
-        this.sum += this.numbers.reduce((p, c) => p + c)
-        if (String(this.sum).split('.')[1]?.length > 3) this.sum = Number(this.sum.toFixed(3))
+        this.massRound()
+        this.sumCalculate()
+        this.end()
+    }
 
-        for (let value of this.numbers) {
-            if (String(value).split('.')[1]?.length > 3) value = Number(value.toFixed(3))
-            if (this.hExp && this.compare(value, this.hExp, this.hNum)) { 
-                this.output.push(`[${value}]`)
-                continue
+    gen() {
+        for (let ii = 0; ii < this.repeat; ii++) {
+            this.arr.push([])
+
+            for (let i = 0; i < this.dNumber; i++) {
+                this.arr[ii].push(randint(1, this.dEdges))
             }
-
-            this.output.push(String(value))
         }
     }
 
     modCalculate() {
-        const regexpMod = /(=?[+\-*\/])(?:(\d*[.,]?\d+)?d?(\d*[.,]?\d+)?)/g
+        const mods = []
         let match: RegExpMatchArray
+
+        class RollMod {
+            symbol: string
+            value: number
+            sum: boolean
+            error: boolean
+
+            constructor(match: RegExpMatchArray) {
+                this.symbol = match[1]
+                this.value = Number(match[3])
+                this.sum = false
+                this.error = false
+            
+                const dice = Math.floor(Number(match[2]))
+                if (!Number.isNaN(dice)) {
+                    if (Number.isNaN(this.value)) this.value = 1
+                    if (!dice || !this.value || dice > 1000 || this.value > 1000) { this.error = true; return }
+                    let sum = 0
+                
+                    for (let i = 0; i < this.value; i++) {
+                        sum += randint(1, dice)
+                    }
+                
+                    this.value = sum
+                }
+            
+                if (this.symbol.startsWith('=')) {
+                    this.symbol = this.symbol.replace('=', '')
+                    this.sum = true
+                }
+            }
+        }
 
         while ((match = regexpMod.exec(this.mod)) !== null) {
             if (match.index === regexpMod.lastIndex) regexpMod.lastIndex++
 
-            this.mods.push(new RollMod(match))
+            mods.push(new RollMod(match))
         }
 
-        for (const mod of this.mods) {
-            if (mod.err) { this.err = true; return }
-            if (mod.sum) { this.sum = this.mth(this.sum, mod.symbol, mod.value); continue }
-            this.numbers.forEach((value, index) => {
-                this.numbers[index] = this.mth(value, mod.symbol, mod.value)
-            })
+        for (const mod of mods) {
+            for (let i = 0; i < this.repeat; i++) {
+                if (mod.error) { this.error = true; return }
+                if (mod.sum) {
+                    delete mod.sum
+                    delete mod.error
+
+                    this.lastMod.push(mod)
+                    continue
+                }
+
+                for (const [index, value] of this.arr[i].entries()) {
+                    this.arr[i][index] = this.mth(value, mod.symbol, mod.value)
+                }
+            }
+        }
+    }
+
+    massRound() {
+        for (let i = 0; i < this.repeat; i++) {
+            for (const [index, value] of this.arr[i].entries()) {
+                const [int, fl] = String(value).split('.')
+
+                if (fl?.length > 3) {
+                    this.arr[i][index] = Number(int + '.' + fl.slice(0, 3))
+                }
+            }
+        }
+    }
+
+    sumCalculate() {
+        for (let i = 0; i < this.repeat; i++) {
+            this.sum.push(this.arr[i].reduce((p, c) => p + c))
+
+            for (const mod of this.lastMod) {
+                this.sum[i] = this.mth(this.sum[i], mod.symbol, mod.value)
+            }
+        }
+    }
+
+    end() {
+        for (let i = 0; i < this.repeat; i++) {
+            this.output.push([])
+            this.hgtlsum.push(0)
+
+            for (const number of this.arr[i]) {
+                let num = String(number)
+
+                if (this.hSymbol && this.compare(number, this.hSymbol, this.hNumber)) {
+                    this.hgtlsum[i]++
+                    num = `[${number}]`
+                }
+                this.output[i].push(num)
+            }
         }
     }
 
@@ -98,56 +178,34 @@ class Roll {
             case '<': return a < b
         }
     }
-
 }
 
-class RollMod {
-    symbol: string
-    value: number
-    sum: boolean
-    err: boolean
-
-    constructor(match: RegExpMatchArray) {
-        this.symbol = match[1]
-        this.value = Number(match[2])
-        this.sum = false
-        this.err = false
-
-        const dice = Number(match[3])
-        if (!Number.isNaN(dice)) {
-            if (Number.isNaN(this.value)) this.value = 1
-            if (!dice || !this.value || dice > 1000 || this.value > 1000) { this.err = true; return }
-            let sum = 0
-
-            for (let i = 0; i < this.value; i++) {
-                sum += randint(1, dice)
-            }
-
-            this.value = sum
-        }
-
-        if (this.symbol.includes('=')) {
-            this.symbol.replace('=', '')
-            this.sum = true
-        }
-    }
-}
 
 client.on('message', async (message: Message) => {
     if (message.author.bot) return
     if (!regexpRoll.test(message.content)) return
 
     const roll = new Roll(message.content.match(regexpRoll))
-    const desc = '```css\n' + roll.output.join(' ') + '```'
-    if (roll.err || desc.length > 2048) { message.react('❌'); return }
+    if (roll.error) { message.react('❌'); return }
+
+    let author = message.author.username
+    for (let i = 0; i < roll.repeat; i++) {
+        if (roll.dNumber > 1) author += ` +${roll.sum[i]}`
+        if (roll.hSymbol) author += ` [${roll.hgtlsum[i]}]`
+    }
+
+    let desc = ''
+    for (let i = 0; i < roll.repeat; i++) {
+        desc += '```css\n' + roll.output[i].join(' ') + '```'
+    }
+
+    if (desc.length > 2048) desc = desc.slice(0, 2042) + '...```'
+    if (author.length > 256) author = author.slice(0, 253) + '...'
 
     const Embed = newEmbed()
         .setDescription(desc)
         .setFooter(roll.text ?? '')
-        .setAuthor(
-            `${message.author.username} [${roll.sum}]`,
-            message.author.displayAvatarURL({format: 'png', dynamic: true, size: 4096})
-        )
-
+        .setAuthor(author, message.author.displayAvatarURL({format: 'png', dynamic: true, size: 4096}))
+    
     await message.channel.send(Embed)
 })
