@@ -135,7 +135,12 @@ class Roll {
 
     sumCalculate() {
         for (let i = 0; i < this.repeat; i++) {
-            this.sum.push(this.arr[i].reduce((p, c) => p + c))
+            let sum = this.arr[i].reduce((p, c) => p + c)
+
+            const [, fl] = String(sum).split('.')
+            if (fl?.length > 3) sum = Number(sum.toFixed(3))
+
+            this.sum.push(sum)
 
             for (const mod of this.lastMod) {
                 this.sum[i] = this.mth(this.sum[i], mod.symbol, mod.value)
@@ -190,7 +195,7 @@ client.on('message', async (message: Message) => {
 
     let author = message.author.username
     for (let i = 0; i < roll.repeat; i++) {
-        if (roll.dNumber > 1) author += ` +${roll.sum[i]}`
+        if (roll.dNumber > 1 || roll.lastMod.length > 0) author += ` +${roll.sum[i]}`
         if (roll.hSymbol) author += ` [${roll.hgtlsum[i]}]`
     }
 

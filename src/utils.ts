@@ -10,12 +10,20 @@ declare global {
         isNumber(): boolean
         matchf(regexp: RegExp): null | string[]
     }
+    interface Number {
+        numsafterdot(): number
+    }
     interface Date {
         strftime(format: string): string
     }
     interface Array<T> {
         add(elem: any, check?: any): this
-        changeType(type: Function, force?: boolean): any[]
+        randomKey(): number
+        randomValue(): unknown
+    }
+    interface Object {
+        randomKey(): string
+        randomValue(): unknown
     }
 }
 
@@ -59,6 +67,12 @@ function (...symbols: string[]): boolean {
     return false
 }
 
+Number.prototype.numsafterdot =
+function (): number {
+    const [, fl] = String(this).split('.')
+    return fl.length ?? 0
+}
+
 Date.prototype.strftime = 
 function(format: string):string {
     let date = this
@@ -90,6 +104,28 @@ Array.prototype.add =
 function (elem: any, check: any = true): any[] {
     if (check) this.push(elem)
     return this
+}
+
+Object.prototype.randomKey =
+function() {
+    const keys = Object.keys(this)
+    return keys[randint(0, keys.length - 1)]
+}
+
+Object.prototype.randomValue =
+function() {
+    const values = Object.values(this)
+    return values[randint(0, values.length - 1)]
+}
+
+Array.prototype.randomKey =
+function() {
+    return randint(0, this.length - 1)
+}
+
+Array.prototype.randomValue =
+function() {
+    return this[randint(0, this.length - 1)]
 }
 
 // --------------------
