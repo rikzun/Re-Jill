@@ -31,7 +31,14 @@ const trDictionary = {
     'MANAGE_NICKNAMES': 'Управлять никнеймами',
     'MANAGE_ROLES': 'Управлять ролями',
     'MANAGE_WEBHOOKS': 'Управлять вебхуками (webhooks)',
-    'MANAGE_EMOJIS': 'Управлять эмодзи'
+    'MANAGE_EMOJIS': 'Управлять эмодзи',
+    'desktop': 'ПК',
+    'web': 'браузер',
+    'mobile': 'телефон',
+    'PLAYING': 'Играет в',
+    'STREAMING': 'Стримит',
+    'LISTENING': 'Слушает',
+    'WATCHING': 'Смотрит',
 }
 
 function tr(key: string): string {

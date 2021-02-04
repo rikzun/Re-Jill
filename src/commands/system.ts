@@ -7,11 +7,8 @@ const commands: RawCommand[] = [
         aliases: ['eval', 'e'],
         args: {'code*': ''},
         ownerOnly: true,
-        execute: async (message: Message, input: string) => {
+        execute: async (message: Message, code: string) => {
             try {
-                const code = input.match(/```ts\n([\s\S]*?)```/)[1]
-                if (!code) throw 'Отсутствует Markdown'
-
                 const imports = 'discord = require("discord.js"), utils = require("../utils/functions")'
                 let evaled = inspect(await eval(`(async(${imports})=>{${code}})()`))
                 if (!code.includes('return')) return

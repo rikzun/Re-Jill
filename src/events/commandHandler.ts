@@ -1,6 +1,6 @@
 import { client } from '../bot'
 import { DMChannel, Message } from 'discord.js'
-import { MessageEmbed, GuildMemberRT } from '../utils/classes'
+import { MessageEmbed } from '../utils/classes'
 import { tr } from '../utils/translate'
 
 client.on('message', async (message: Message) => {
@@ -8,18 +8,6 @@ client.on('message', async (message: Message) => {
     if (!message.content.startsWith(client.prefix)) return
 
     const [messageCommandName, ...messageArgs] = message.content.substring(client.prefix.length).split(' ')
-
-    client.commands['tt'] = {
-        args: {'kekw*': null},
-        execute: (message: Message, kekw: string)=>{
-            console.log(kekw)
-        },
-        memberPerms: ['ADMINISTRATOR'],
-        clientPerms: [],
-
-        ownerOnly: true,
-        guildOnly: false
-    }
 
     if (!client.commands.hasOwnProperty(messageCommandName)) return
     const clientCommand = client.commands[messageCommandName]
@@ -88,18 +76,18 @@ client.on('message', async (message: Message) => {
                 transferArgs.push(Number(messageCommandArgument))
             }
 
-            case 'GuildMemberRT': {
-                const rt = new GuildMemberRT()
+            case 'GuildMember': {
+                const matches = []
 
-                if (!messageCommandArgument) { rt.missingArg = true; break }
+                if (!messageCommandArgument) { transferArgs.push([undefined]); break }
                 const members = await message.guild.members.fetch()
 
                 //id
-                if (messageCommandArgument.isNumber()) rt.matches.push(members.get(messageCommandArgument))
+                if (messageCommandArgument.isNumber()) matches.push(members.get(messageCommandArgument))
 
                 //mention
                 const mention = messageCommandArgument.match(/<@!?(\d+)>/)
-                if (mention !== null) rt.matches.push(members.get(mention[1]))
+                if (mention !== null) matches.push(members.get(mention[1]))
 
                 //usernameHashTag
                 const usernameHashTag = messageCommandArgument.match(/(.+)\n?#(\d{4})/)
@@ -108,21 +96,20 @@ client.on('message', async (message: Message) => {
                         member.user.username.toLocaleLowerCase() == usernameHashTag[1].toLocaleLowerCase()
                         &&
                         member.user.discriminator == usernameHashTag[2]
-                    ).forEach(member => rt.matches.push(member))
+                    ).forEach(member => matches.push(member))
                 }
 
                 //nickname
                 members.filter(member => 
-                    member.nickname?.toLocaleLowerCase() == usernameHashTag[1].toLocaleLowerCase()
-                ).forEach(member => rt.matches.push(member))
+                    member.nickname?.toLocaleLowerCase() == messageCommandArgument.toLocaleLowerCase()
+                ).forEach(member => matches.push(member))
 
                 //username
                 members.filter(member => 
-                    member.user.username.toLocaleLowerCase() == usernameHashTag[1].toLocaleLowerCase()
-                ).forEach(member => rt.matches.push(member))
+                    member.user.username.toLocaleLowerCase() == messageCommandArgument.toLocaleLowerCase()
+                ).forEach(member => matches.push(member))
 
-                if (rt.matches.empty) rt.notFound = true
-                transferArgs.push(rt)
+                transferArgs.push(matches)
                 break
             }
         }

@@ -1,4 +1,4 @@
-import { RawCommand, MessageEmbed, GuildMemberRT } from '../utils/classes'
+import { RawCommand, MessageEmbed } from '../utils/classes'
 import { Message, GuildMember } from 'discord.js'
 import { strftime } from '../utils/functions'
 import { tr } from '../utils/translate'
@@ -6,20 +6,21 @@ import { tr } from '../utils/translate'
 const commands: RawCommand[] = [
     {
         aliases: ['user'],
-        args: {'gmrt*': 'GuildMemberRT'},
+        args: {'gmrt*': 'GuildMember'},
         guildOnly: true,
-        execute: async (message: Message, gmrt: GuildMemberRT) => {
-            if (gmrt.notFound) {
+        execute: async (message: Message, members: GuildMember[]) => {
+            if (members.empty) {
                 const Embed = new MessageEmbed()
                     .setDescription('🚫 Пользователь не найден')
                 return message.channel.send(Embed)
             }
-            if (gmrt.missingArg) gmrt.matches.push(message.member)
+
+            if (members[0] == undefined) members = [message.member]
             
-            if (gmrt.matches.length > 1) {
+            if (members.length > 1) {
                 const Embed = new MessageEmbed()
                     .setTitle('Найдено несколько совпадений...')
-                    .setDescription(gmrt.matches.map((e, i) => `\`${i}\`: ` + e.toString()))
+                    .setDescription(members.map((e, i) => `\`${i}\`: ` + e.toString()))
                     .setFooter('В течении 20с отправьте номер пользователя.')
                 message.channel.send(Embed)
 
@@ -29,23 +30,16 @@ const commands: RawCommand[] = [
                 )
     
                 collector.on('collect', msg => {
-                    if (msg.content.isNumber()) {
-                        if (gmrt.matches[msg.content]) {
-                            gmrt.matches = [gmrt.matches[msg.content]]
-                            sendMessage()
-                            collector.stop()
-                        } else {
-                            const Embed = new MessageEmbed()
-                                .setTitle('🚫 Ошибка')
-                                .setDescription('Попробуйте ещё раз.')
-                            message.channel.send(Embed)
-                        }
+                    if (msg.content.isNumber() && members[msg.content]) {
+                        members = [members[msg.content]]
+                        sendMessage()
+                        collector.stop()
                     }
                 })
             } else { sendMessage() }
 
-            function sendMessage(): void {
-                const member = gmrt.matches[0]
+            async function sendMessage() {
+                const member = members[0]
                 const presence = member.user.presence
                 const description = []
                 const activities = []
@@ -53,7 +47,7 @@ const commands: RawCommand[] = [
                 let platform = Object.keys(presence.clientStatus ?? []).map(e => tr(e))
                 if (member.user.bot) platform = ['Бот']
 
-                description[0] = []
+                description
                     .add(`Псевдоним: ${member.nickname}`, member.nickname)
                     .add(`Пользователь: ${member.user.tag}`)
                     .add(`Регистрация: ${strftime(member.user.createdTimestamp, '%d.%m.%y %H:%M:%S')}`)
@@ -63,12 +57,12 @@ const commands: RawCommand[] = [
 
                 for (const activity of presence.activities) {
                     if (activity.type == 'CUSTOM_STATUS') {
-                        activities.push([tr(activity.type) + activity.state])
+                        activities.push([activity.state])
                         continue
                     }
 
                     const activityForm = []
-                        .add(tr(activity.type) + activity.name)
+                        .add(tr(activity.type) + ' ' + activity.name)
                         .add(activity.details, activity.details)
                         .add(activity.state, activity.state)
                     activities.push(activityForm.join('\n'))
@@ -76,7 +70,7 @@ const commands: RawCommand[] = [
 
                 const Embed = new MessageEmbed()
                     .setThumbnail(member.user.displayAvatarURL({format: 'png', dynamic: true, size: 4096}))
-                    .addField('Общее', '```\n' + description[0].join('\n') + '```')
+                    .addField('Общее', '```\n' + description.join('\n') + '```')
 
                 if (activities.length) Embed.addField('Активность', activities.map(a => '```\n' + a + '```').join(''))
 

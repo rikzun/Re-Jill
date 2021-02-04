@@ -1,10 +1,10 @@
-export { ClientOptions, ClientCommand, RawCommand, MessageEmbed, GuildMemberRT }
+export { ClientOptions, ClientCommand, RawCommand, MessageEmbed }
 import { PermissionString, MessageEmbed as OldMessageEmbed, ClientOptions as OldClientOptions, GuildMember } from 'discord.js'
 
 type Constructors =
 | ''
 | 'Number'
-| 'GuildMemberRT'
+| 'GuildMember'
 
 interface Argument {
     [arg: string]: Constructors
@@ -44,17 +44,5 @@ class MessageEmbed extends OldMessageEmbed {
     constructor() {
         super()
         this.color = 3092790
-    }
-}
-
-class GuildMemberRT {
-    notFound: boolean
-    missingArg: boolean
-    matches: GuildMember[]
-
-    constructor() {
-        this.notFound = false
-        this.missingArg = false
-        this.matches = []
     }
 }

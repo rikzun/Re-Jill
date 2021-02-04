@@ -30,7 +30,7 @@ class Client extends OldClient {
 
             for (const rawCmd of rawCmdArray) {
                 const command = new ClientCommand(rawCmd)
-                rawCmd.aliases.forEach(alias => this.commands[alias] = rawCmd)
+                rawCmd.aliases.forEach(alias => this.commands[alias] = command)
             }
         }
     }
@@ -44,7 +44,7 @@ class Client extends OldClient {
 }
 
 const client = new Client()
-// client.loadCommands()
+client.loadCommands()
 client.loadEvents()
 client.login(DISCORD_TOKEN)
 
