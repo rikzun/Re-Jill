@@ -1,6 +1,7 @@
 import { client } from '../bot'
 import { Message } from 'discord.js'
-import { print, newEmbed, randint } from '../utils'
+import { randint } from '../utils/functions'
+import { MessageEmbed } from '../utils/classes'
 
 const regexpRoll = /^(?:(\d*)?d(\d*))(?: ?\((\d*)\))?((?: ?=?[+\-*\/] ?(?:(?:\d*)?d?(?:\d*.?\d+)))*)(?: ?_(>|>=|=|<=|<)(\d*\.?\d+))?(?: ([\s\S]*))?$/
 const regexpMod = /(=?[+\-*\/])(?:(?:(\d*)d)?(\d*\.?\d+)?)/g
@@ -97,11 +98,7 @@ class Roll {
             }
         }
 
-        while ((match = regexpMod.exec(this.mod)) !== null) {
-            if (match.index === regexpMod.lastIndex) regexpMod.lastIndex++
-
-            mods.push(new RollMod(match))
-        }
+        for (const match of this.mod.matchG(regexpMod)) mods.push(new RollMod(match))
 
         for (const mod of mods) {
             for (let i = 0; i < this.repeat; i++) {
@@ -195,7 +192,7 @@ client.on('message', async (message: Message) => {
 
     let author = message.author.username
     for (let i = 0; i < roll.repeat; i++) {
-        if (roll.dNumber > 1 || roll.lastMod.length > 0) author += ` +${roll.sum[i]}`
+        if (roll.dNumber > 1 || !roll.lastMod.empty) author += ` +${roll.sum[i]}`
         if (roll.hSymbol) author += ` [${roll.hgtlsum[i]}]`
     }
 
@@ -207,7 +204,7 @@ client.on('message', async (message: Message) => {
     if (desc.length > 2048) desc = desc.slice(0, 2042) + '...```'
     if (author.length > 256) author = author.slice(0, 253) + '...'
 
-    const Embed = newEmbed()
+    const Embed = new MessageEmbed()
         .setDescription(desc)
         .setFooter(roll.text ?? '')
         .setAuthor(author, message.author.displayAvatarURL({format: 'png', dynamic: true, size: 4096}))

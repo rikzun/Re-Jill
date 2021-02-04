@@ -1,34 +1,25 @@
-import { client, fileCommands } from '../bot'
-import { Message, MessageEmbed, GuildMember } from 'discord.js'
-import { newEmbed, print, LocalTranslate } from '../utils'
+import { RawCommand, MessageEmbed, GuildMemberRT } from '../utils/classes'
+import { Message, GuildMember } from 'discord.js'
+import { strftime } from '../utils/functions'
+import { tr } from '../utils/translate'
 
-const translateData = new LocalTranslate({
-    'desktop': 'Компьютер',
-    'web': 'Браузер',
-    'mobile': 'Телефон',
-    'CUSTOM_STATUS': 'Статус: ',
-    'PLAYING': 'Играет в ',
-    'LISTENING': 'Слушает ',
-    'WATCHING': 'Смотрит '
-})
-
-const commands: fileCommands[] = [
+const commands: RawCommand[] = [
     {
         aliases: ['user'],
-        args: {'member*': 'GuildMember'},
+        args: {'gmrt*': 'GuildMemberRT'},
         guildOnly: true,
-        run: async (message: Message, members: GuildMember[] = [message.member]) => {
-            if (members == null) {
-                const Embed = newEmbed()
+        execute: async (message: Message, gmrt: GuildMemberRT) => {
+            if (gmrt.notFound) {
+                const Embed = new MessageEmbed()
                     .setDescription('🚫 Пользователь не найден')
-                message.channel.send(Embed)
-                return
+                return message.channel.send(Embed)
             }
-
-            if (members.length > 1) {
-                const Embed = newEmbed()
+            if (gmrt.missingArg) gmrt.matches.push(message.member)
+            
+            if (gmrt.matches.length > 1) {
+                const Embed = new MessageEmbed()
                     .setTitle('Найдено несколько совпадений...')
-                    .setDescription(members.map((e, i) => `\`${i}\`: ` + e.toString()))
+                    .setDescription(gmrt.matches.map((e, i) => `\`${i}\`: ` + e.toString()))
                     .setFooter('В течении 20с отправьте номер пользователя.')
                 message.channel.send(Embed)
 
@@ -39,12 +30,12 @@ const commands: fileCommands[] = [
     
                 collector.on('collect', msg => {
                     if (msg.content.isNumber()) {
-                        if (members[msg.content]) {
-                            members = [members[msg.content]]
+                        if (gmrt.matches[msg.content]) {
+                            gmrt.matches = [gmrt.matches[msg.content]]
                             sendMessage()
                             collector.stop()
                         } else {
-                            const Embed = newEmbed()
+                            const Embed = new MessageEmbed()
                                 .setTitle('🚫 Ошибка')
                                 .setDescription('Попробуйте ещё раз.')
                             message.channel.send(Embed)
@@ -54,36 +45,36 @@ const commands: fileCommands[] = [
             } else { sendMessage() }
 
             function sendMessage(): void {
-                const member = members[0]
+                const member = gmrt.matches[0]
                 const presence = member.user.presence
                 const description = []
                 const activities = []
 
-                let platform = Object.keys(presence.clientStatus ?? []).map(e => translateData.translate(e))
+                let platform = Object.keys(presence.clientStatus ?? []).map(e => tr(e))
                 if (member.user.bot) platform = ['Бот']
 
                 description[0] = []
                     .add(`Псевдоним: ${member.nickname}`, member.nickname)
                     .add(`Пользователь: ${member.user.tag}`)
-                    .add(`Регистрация: ${new Date(member.user.createdTimestamp).strftime('%d.%m.%y %H:%M:%S')}`)
-                    .add(`Подключение: ${new Date(member.joinedTimestamp).strftime('%d.%m.%y %H:%M:%S')}`)
+                    .add(`Регистрация: ${strftime(member.user.createdTimestamp, '%d.%m.%y %H:%M:%S')}`)
+                    .add(`Подключение: ${strftime(member.joinedTimestamp, '%d.%m.%y %H:%M:%S')}`)
                     .add(`Платформа: ${platform.join(', ')}`, platform.length)
                     .add(`ID: ${member.id}`)
 
                 for (const activity of presence.activities) {
                     if (activity.type == 'CUSTOM_STATUS') {
-                        activities.push([translateData.translate(activity.type) + activity.state])
+                        activities.push([tr(activity.type) + activity.state])
                         continue
                     }
 
                     const activityForm = []
-                        .add(translateData.translate(activity.type) + activity.name)
+                        .add(tr(activity.type) + activity.name)
                         .add(activity.details, activity.details)
                         .add(activity.state, activity.state)
                     activities.push(activityForm.join('\n'))
                 }
 
-                const Embed = newEmbed()
+                const Embed = new MessageEmbed()
                     .setThumbnail(member.user.displayAvatarURL({format: 'png', dynamic: true, size: 4096}))
                     .addField('Общее', '```\n' + description[0].join('\n') + '```')
 
@@ -95,8 +86,8 @@ const commands: fileCommands[] = [
     },
     {
         aliases: ['help', '?'],
-        run: async (message: Message) => {
-            const Embed = newEmbed()
+        execute: async (message: Message) => {
+            const Embed = new MessageEmbed()
                 .setDescription('Информация о командах описана на [сайте](https://github.com/RikZun/Re-Jill/wiki) бота')
 
             message.channel.send(Embed)

@@ -1,118 +1,134 @@
 import { client } from '../bot'
-import { Message } from 'discord.js'
-import { print, newEmbed } from '../utils'
+import { DMChannel, Message } from 'discord.js'
+import { MessageEmbed, GuildMemberRT } from '../utils/classes'
+import { tr } from '../utils/translate'
 
 client.on('message', async (message: Message) => {
     if (message.author.bot) return
     if (!message.content.startsWith(client.prefix)) return
 
-    const messageArray = message.content.split(' ')
-    const messageCommandName = messageArray[0].replace(client.prefix, '')
+    const [messageCommandName, ...messageArgs] = message.content.substring(client.prefix.length).split(' ')
 
-    messageArray.shift()
-    const messageArgs = messageArray
+    client.commands['tt'] = {
+        args: {'kekw*': null},
+        execute: (message: Message, kekw: string)=>{
+            console.log(kekw)
+        },
+        memberPerms: ['ADMINISTRATOR'],
+        clientPerms: [],
+
+        ownerOnly: true,
+        guildOnly: false
+    }
 
     if (!client.commands.hasOwnProperty(messageCommandName)) return
-    const command = client.commands[messageCommandName]
+    const clientCommand = client.commands[messageCommandName]
 
-    if (!command.status) return
-    if (message.guild == null && command.guildOnly) {
-        const Embed = newEmbed()
-            .setDescription('🚫 Только для сервера.')
+    if (!(message.channel instanceof DMChannel) && (!clientCommand.clientPerms.empty || !clientCommand.memberPerms.empty)) {
 
-        message.channel.send(Embed)
-        return
-    }
-    if (message.author.id !== client.owner && command.ownerOnly) {
-        const Embed = newEmbed()
-            .setDescription('🚫 Только для создателя бота.')
+        //client permissions
+        if (!clientCommand.clientPerms.empty) {
+            const channelPermissions = message.channel.permissionsFor(client.user)
+            
+            if (!channelPermissions.has(clientCommand.clientPerms)) {
+                const Embed = new MessageEmbed()
+                    .setTitle('Боту не хватает следующих прав')
+                    .setDescription('```\n' + channelPermissions.missing(clientCommand.clientPerms).map(v => tr(v)).join('\n') + '```')
 
-        message.channel.send(Embed)
-        return
-    }
-
-    //argument handler
-    let argIndex = 0
-    const transferArgs = []
-    let argContent = messageArgs[argIndex]
-    for (const [argName, consturtor] of Object.entries(command.args)) {
-
-        const kwargs = argName.match(/\w+(\*|\[\])/)
-        if (kwargs) {
-            switch (kwargs[1]) {
-                case '*':
-                    let spliced = messageArgs.splice(argIndex).join(' ')
-                    if (spliced == '') spliced = undefined
-
-                    argContent = spliced
-                    break
-    
-                case '[]':
-                    transferArgs.push(messageArgs.splice(argIndex, messageArgs.length))
-                    continue
+                return message.channel.send(Embed)
             }
         }
 
-        switch (consturtor) {
-            case '':
-                transferArgs.push(argContent)
-                break
+        //member permissions
+        if (!clientCommand.memberPerms.empty) {
+            const channelPermissions = message.channel.permissionsFor(message.member)
+            
+            if (!channelPermissions.has(clientCommand.memberPerms)) {
+                const Embed = new MessageEmbed()
+                    .setTitle('Вам не хватает следующих прав')
+                    .setDescription('```\n' + channelPermissions.missing(clientCommand.memberPerms).map(v => tr(v)).join('\n') + '```')
 
-            case 'string':
-                transferArgs.push(String(argContent))
-                break
-
-            case 'number':
-                transferArgs.push(Number(argContent))
-                break
-
-            case 'GuildMember':
-                if (!argContent) { transferArgs.push(argContent); break }
-                const users = await message.guild.members.fetch()
-                let matches = []
-
-                if (argContent.match(/^\d+$/m) !== null) {//id
-                    try {
-                        const member = await message.guild.members.fetch(argContent)
-                        matches.push(member)
-                    } catch (error) {}
-                }
-
-                const mention = argContent.match(/^<@!?(\d+)>$/m)
-                if (mention !== null) {
-                    try {
-                        const member = await message.guild.members.fetch(mention[1])
-                        matches.push(member)
-                    } catch (error) {}
-                }
-
-                const usernamePlusTag = argContent.match(/^([\s\S]*)#(\d{4})$/m)
-                if (usernamePlusTag !== null) {
-                    const member = users.filter(
-                        m => m.user.username.toLowerCase() == usernamePlusTag[1].toLowerCase() && m.user.discriminator == usernamePlusTag[2]
-                    ).array()
-
-                    member.forEach(gm => {
-                        matches.push(gm)
-                    })
-                }
-
-                const nickname = users.filter(m => m.nickname && m.nickname.toLowerCase() == argContent.toLowerCase()).array()
-                nickname.forEach(gm => {
-                    matches.push(gm)
-                })
-
-                const username = users.filter(m => m.user.username.toLowerCase() == argContent.toLowerCase()).array()
-                username.forEach(gm => {
-                    matches.push(gm)
-                })
-
-                if (matches.length == 0) matches = null
-                transferArgs.push(matches)
-                break
+                return message.channel.send(Embed)
+            }
         }
-        argIndex++
     }
-    
-    await command.run(message, ...transferArgs)
+
+    if (clientCommand.ownerOnly && message.author.id !== client.owner) {
+        const Embed = new MessageEmbed()
+            .setDescription('🚫 Данная команда разрешена к использованию только создателю бота')
+        return message.channel.send(Embed)
+    }
+
+    if (clientCommand.guildOnly && message.guild == null) {
+        const Embed = new MessageEmbed()
+            .setDescription('🚫 Данная команда разрешена к использованию только на сервере')
+        return message.channel.send(Embed)
+    }
+
+    const transferArgs: any[] = [message]
+    let messageCommandArgIndex = 0
+    let messageCommandArgument = messageArgs[messageCommandArgIndex]
+    for (const [clientCommandArgName, constructor] of Object.entries(clientCommand.args)) {
+
+        //kwargs check
+        if (clientCommandArgName.endsWith('*')) {
+            messageCommandArgument = messageArgs.splice(messageCommandArgIndex, messageArgs.length).join(' ')
+        } else if (clientCommandArgName.startsWith('...')) {
+            transferArgs.push(messageArgs.splice(messageCommandArgIndex, messageArgs.length))
+            continue
+        }
+
+        switch (constructor) {
+            case '': {
+                transferArgs.push(messageCommandArgument)
+                break
+            }
+
+            case 'Number': {
+                transferArgs.push(Number(messageCommandArgument))
+            }
+
+            case 'GuildMemberRT': {
+                const rt = new GuildMemberRT()
+
+                if (!messageCommandArgument) { rt.missingArg = true; break }
+                const members = await message.guild.members.fetch()
+
+                //id
+                if (messageCommandArgument.isNumber()) rt.matches.push(members.get(messageCommandArgument))
+
+                //mention
+                const mention = messageCommandArgument.match(/<@!?(\d+)>/)
+                if (mention !== null) rt.matches.push(members.get(mention[1]))
+
+                //usernameHashTag
+                const usernameHashTag = messageCommandArgument.match(/(.+)\n?#(\d{4})/)
+                if (usernameHashTag !== null) {
+                    members.filter(member => 
+                        member.user.username.toLocaleLowerCase() == usernameHashTag[1].toLocaleLowerCase()
+                        &&
+                        member.user.discriminator == usernameHashTag[2]
+                    ).forEach(member => rt.matches.push(member))
+                }
+
+                //nickname
+                members.filter(member => 
+                    member.nickname?.toLocaleLowerCase() == usernameHashTag[1].toLocaleLowerCase()
+                ).forEach(member => rt.matches.push(member))
+
+                //username
+                members.filter(member => 
+                    member.user.username.toLocaleLowerCase() == usernameHashTag[1].toLocaleLowerCase()
+                ).forEach(member => rt.matches.push(member))
+
+                if (rt.matches.empty) rt.notFound = true
+                transferArgs.push(rt)
+                break
+            }
+        }
+
+        messageCommandArgIndex++
+    }
+
+    await clientCommand.execute(...transferArgs)
 })

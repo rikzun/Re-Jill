@@ -1,30 +1,28 @@
-import { Message, MessageEmbed } from 'discord.js'
+import { Message } from 'discord.js'
 import { inspect } from "util"
-import { fileCommands } from '../bot'
-import { print, newEmbed } from '../utils'
-import { transpile } from 'typescript'
+import { MessageEmbed, RawCommand } from '../utils/classes'
 
-const commands: fileCommands[] = [
+const commands: RawCommand[] = [
     {
         aliases: ['eval', 'e'],
-        args: {'code*': 'string'},
+        args: {'code*': ''},
         ownerOnly: true,
-        run: async (message: Message, input: string) => {
+        execute: async (message: Message, input: string) => {
             try {
                 const code = input.match(/```ts\n([\s\S]*?)```/)[1]
                 if (!code) throw 'Отсутствует Markdown'
 
-                const imports = 'discord = require("discord.js"), utils = require("../utils")'
-                let evaled = inspect(await eval('(async(' + imports + ')=>{' + transpile(code) + '})()'))
+                const imports = 'discord = require("discord.js"), utils = require("../utils/functions")'
+                let evaled = inspect(await eval(`(async(${imports})=>{${code}})()`))
                 if (!code.includes('return')) return
                 if (evaled.includes('```')) evaled = evaled.replace(/```/g, '~~~')
 
                 let page = 0
                 let buffer = []
 
-                if (evaled.length > 1900) {
-                    for(let tl = evaled.length; tl > 0; tl = tl - 1900) {
-                        const index = Math.max(...evaled.indexOfAll('\n').filter(index => index < 1900))
+                if (evaled.length > 2048) {
+                    for(let tl = evaled.length; tl > 0; tl = tl - 2048) {
+                        const index = Math.max(...evaled.indexOfAll('\n').filter(index => index < 2048))
                         const part = evaled.slice(0, index)
                         evaled = evaled.replace(part, '')
                         buffer.push(part)
@@ -34,7 +32,7 @@ const commands: fileCommands[] = [
                 
                 function content() {
                     const output = '```ts\n' + buffer[page] + '```' + '```autohotkey\n' + `::page ${page + 1}/${buffer.length}` + '```'
-                    return newEmbed().setDescription(output)
+                    return new MessageEmbed().setDescription(output)
                 }
                 
                 const sentMessage = await message.channel.send(content())
@@ -96,7 +94,7 @@ const commands: fileCommands[] = [
                 })
             } catch (err) {
                 const output = '```ts\n' + err + '```' + '```autohotkey\n::page 1/1```'
-                const sentMessage = await message.channel.send(newEmbed().setDescription(output))
+                const sentMessage = await message.channel.send(new MessageEmbed().setDescription(output))
                 await sentMessage.react('🆗')
 
                 const collector = sentMessage.createReactionCollector(

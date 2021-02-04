@@ -1,69 +1,53 @@
-import { print } from './utils'
-import { Client as BasicClient } from 'discord.js'
+export { client }
+import { Client as OldClient } from 'discord.js'
+import { ClientCommand, RawCommand, ClientOptions } from './utils/classes'
+import { DISCORD_TOKEN } from './config'
 import * as path from 'path'
 import * as fs from 'fs' 
+import './utils/proto'
 
-//Better bot class
-class Client extends BasicClient {
+class Client extends OldClient {
     public owner: string
     public prefix: string
-    public version: string
     public commands: {
-        [command: string]: {
-            run: Function
-            args: { [arg: string]: Constructors }
-            status: boolean
-            ownerOnly: boolean
-            guildOnly: boolean
+        [command: string]: ClientCommand
+    }
+
+    constructor(options?: ClientOptions) {
+        super(options)
+
+        this.owner = '532935768918982656'
+        this.prefix = '//'
+        this.commands = {}
+    }
+
+    public loadCommands(): void {
+        const commandFiles = fs.readdirSync(path.join(__dirname, 'commands'))
+            .map(file => path.join(__dirname, 'commands', file))
+
+        for (const file of commandFiles) {
+            const rawCmdArray: RawCommand[] = require(file).default
+
+            for (const rawCmd of rawCmdArray) {
+                const command = new ClientCommand(rawCmd)
+                rawCmd.aliases.forEach(alias => this.commands[alias] = rawCmd)
+            }
         }
+    }
+
+    public loadEvents(): void {
+        const eventFiles = fs.readdirSync(path.join(__dirname, 'events'))
+            .map(file => path.join(__dirname, 'events', file))
+
+        for (const file of eventFiles) require(file)
     }
 }
 
-type Constructors =
-| ''
-| 'string'
-| 'number'
-| 'GuildMember'
+const client = new Client()
+// client.loadCommands()
+client.loadEvents()
+client.login(DISCORD_TOKEN)
 
-export class fileCommands {
-    aliases: string[]
-    args?: { [arg: string]: Constructors }
-    ownerOnly?: boolean
-    guildOnly?: boolean
-    run: Function
-}
-
-export const client: Client = new Client()
-client.owner = '532935768918982656'
-client.version = '0.2.1d3'
-client.prefix = './'
-client.commands = {}
-
-//event handler
-const eventFiles = fs.readdirSync(__dirname + '/events').map(f => path.join(__dirname, 'events', f))
-for (const file of eventFiles) {
-    require(file)
-}
-
-//command handler
-const commandFiles = fs.readdirSync(__dirname + '/commands').map(f => path.join(__dirname, 'commands', f))
-for (const file of commandFiles) {
-    const commandsArray = require(file).default
-    for (const command of commandsArray) {
-        const cmd =
-        {
-            run: command.run,
-            args: command.args ?? {},
-            ownerOnly: command.ownerOnly ?? false,
-            guildOnly: command.guildOnly ?? false,
-            status: true
-        }
-        command.aliases.forEach(alias => client.commands[alias] = cmd)
-    }
-}
-
-client.once('ready', () => {
-    print('Jill готова к работе!')
+client.on('ready', () => {
+    console.log('Jill готова к работе')
 })
-
-client.login(require('../token.json').DISCORD_TOKEN)

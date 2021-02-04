@@ -1,5 +1,4 @@
-node_modules
-dist
 .vscode
+node_modules
 package-lock.json
-token.json
+config.json
