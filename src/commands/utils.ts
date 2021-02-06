@@ -1,4 +1,4 @@
-import { Collection, Message } from 'discord.js'
+import { Collection, DMChannel, Message } from 'discord.js'
 import { ClientCommand, CommandOptions, MessageEmbed } from '../utils/classes'
 import { emojis } from '../events/emojiData'
 import { emojiRegex, unicodeEmojiRegex } from '../utils/regex'
@@ -116,6 +116,11 @@ const commandArray = [
             collector.on('collect', async (msg: Message) => {
                 if (msg.content.isNumber && options[Number(msg.content) - 1]) {
                     collector.stop()
+                    if (!(message.channel instanceof DMChannel) && message.channel.permissionsFor(message.client.user).has(['MANAGE_MESSAGES'])) {
+                        (await sentMessage).delete()
+                        msg.delete()
+                    }
+
                     this._send(message, options[Number(msg.content) - 1])
                 }
             })
