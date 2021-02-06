@@ -2,6 +2,7 @@ import { client } from '../bot'
 import { DMChannel, Message } from 'discord.js'
 import { MessageEmbed } from '../utils/classes'
 import { tr } from '../utils/translate'
+import { MemberMention, MemberUsernameHash } from '../utils/regex'
 
 client.on('message', async (message: Message) => {
     if (message.author.bot) return
@@ -9,8 +10,20 @@ client.on('message', async (message: Message) => {
 
     const [messageCommandName, ...messageArgs] = message.content.substring(client.prefix.length).split(' ')
 
-    if (!client.commands.hasOwnProperty(messageCommandName)) return
-    const clientCommand = client.commands[messageCommandName]
+    const clientCommand = client.commands.find(cmd => cmd.aliases.includes(messageCommandName))
+    if (!clientCommand) return
+
+    if (!clientCommand.parameters.empty) {
+        let rt: boolean | undefined
+        const aliases = []
+
+        clientCommand.parameters.forEach(v => aliases.push(...v.aliases))
+        for (const parameter of messageArgs.filter(v => aliases.includes(v))) {
+            messageArgs.splice(messageArgs.indexOf(parameter), 1)
+            rt = clientCommand.parameters.find(v => v.aliases.includes(parameter)).execute(message)
+        }
+        if (rt) return
+    }
 
     if (!(message.channel instanceof DMChannel) && (!clientCommand.clientPerms.empty || !clientCommand.memberPerms.empty)) {
 
@@ -55,42 +68,56 @@ client.on('message', async (message: Message) => {
 
     const transferArgs: any[] = [message]
     let messageCommandArgIndex = 0
-    let messageCommandArgument = messageArgs[messageCommandArgIndex]
-    for (const [clientCommandArgName, constructor] of Object.entries(clientCommand.args)) {
+    let messageCommandArgument
+    for (const clientArgument of clientCommand.args) {
+        messageCommandArgument = messageArgs[messageCommandArgIndex]
 
-        //kwargs check
-        if (clientCommandArgName.endsWith('*')) {
-            messageCommandArgument = messageArgs.splice(messageCommandArgIndex, messageArgs.length).join(' ')
-        } else if (clientCommandArgName.startsWith('...')) {
-            transferArgs.push(messageArgs.splice(messageCommandArgIndex, messageArgs.length))
-            continue
-        }
-
-        switch (constructor) {
-            case '': {
-                transferArgs.push(messageCommandArgument)
+        switch(clientArgument.features) {
+            case 'array': {
+                messageCommandArgument = messageArgs.splice(messageCommandArgIndex, messageArgs.length)
                 break
             }
 
-            case 'Number': {
-                transferArgs.push(Number(messageCommandArgument))
+            case 'join': {
+                messageCommandArgument = messageArgs.splice(messageCommandArgIndex, messageArgs.length).join(' ')
+                break
+            }
+        }
+
+        switch (clientArgument.type) {
+            case 'string': {
+                if (Array.isArray(messageCommandArgument)) {
+                    transferArgs.push(messageCommandArgument.map(v => typeof v == 'string' ? v : String(v)))
+                    break
+                }
+                transferArgs.push(typeof messageCommandArgument == 'string' ? messageCommandArgument : String(messageCommandArgument))
+                break
             }
 
-            case 'GuildMember': {
-                const matches = []
+            case 'number': {
+                if (Array.isArray(messageCommandArgument)) {
+                    transferArgs.push(messageCommandArgument.map(v => typeof v == 'number' ? v : Number(v)))
+                    break
+                }
+                transferArgs.push(typeof messageCommandArgument == 'number' ? messageCommandArgument : Number(messageCommandArgument))
+                break
+            }
 
+            case 'GuildMember[]': {
                 if (!messageCommandArgument) { transferArgs.push([undefined]); break }
+
+                const matches = []
                 const members = await message.guild.members.fetch()
 
                 //id
-                if (messageCommandArgument.isNumber()) matches.push(members.get(messageCommandArgument))
+                if (messageCommandArgument.isNumber) matches.push(members.get(messageCommandArgument))
 
                 //mention
-                const mention = messageCommandArgument.match(/<@!?(\d+)>/)
+                const mention = messageCommandArgument.match(MemberMention)
                 if (mention !== null) matches.push(members.get(mention[1]))
 
                 //usernameHashTag
-                const usernameHashTag = messageCommandArgument.match(/(.+)\n?#(\d{4})/)
+                const usernameHashTag = messageCommandArgument.match(MemberUsernameHash)
                 if (usernameHashTag !== null) {
                     members.filter(member => 
                         member.user.username.toLocaleLowerCase() == usernameHashTag[1].toLocaleLowerCase()
@@ -98,6 +125,7 @@ client.on('message', async (message: Message) => {
                         member.user.discriminator == usernameHashTag[2]
                     ).forEach(member => matches.push(member))
                 }
+                
 
                 //nickname
                 members.filter(member => 
@@ -118,4 +146,5 @@ client.on('message', async (message: Message) => {
     }
 
     await clientCommand.execute(...transferArgs)
+    clientCommand.clear()
 })

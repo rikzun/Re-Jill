@@ -98,7 +98,7 @@ class Roll {
             }
         }
 
-        for (const match of this.mod.matchG(regexpMod)) mods.push(new RollMod(match))
+        for (const match of this.mod.matchAll(regexpMod)) mods.push(new RollMod(match))
 
         for (const mod of mods) {
             for (let i = 0; i < this.repeat; i++) {

@@ -1,4 +1,7 @@
-export { wait, randint, strftime }
+import { Message, TextChannel } from "discord.js"
+import { client } from '../bot'
+import { MessageLink } from "./regex"
+export { wait, randint, strftime, fetchMessageLink }
 
 function wait(ms: number): Promise<Function> {
     return new Promise((resolve) => setTimeout(resolve, ms))
@@ -30,4 +33,17 @@ function strftime(num: number, format: string): string {
     })
 
     return format
+}
+
+async function fetchMessageLink(link: string): Promise<Message> {
+    const match = link.match(MessageLink)
+    if (!match) return
+
+    const guild = client.guilds.cache.get(match[1])
+    if (!guild) return
+
+    const channel = guild.channels.cache.get(match[2]) as TextChannel
+    if (!channel) return
+
+    return channel.messages.fetch(match[3])
 }

@@ -1,24 +1,22 @@
 export { client }
-import { Client as OldClient } from 'discord.js'
-import { ClientCommand, RawCommand, ClientOptions } from './utils/classes'
+import { Client as OldClient, ClientOptions } from 'discord.js'
+import { ClientCommand } from './utils/classes'
 import { DISCORD_TOKEN } from './config'
 import * as path from 'path'
 import * as fs from 'fs' 
 import './utils/proto'
 
 class Client extends OldClient {
-    public owner: string
-    public prefix: string
-    public commands: {
-        [command: string]: ClientCommand
-    }
+    readonly owner: string
+    readonly prefix: string
+    readonly commands: ClientCommand[]
 
     constructor(options?: ClientOptions) {
         super(options)
 
         this.owner = '532935768918982656'
         this.prefix = '//'
-        this.commands = {}
+        this.commands = []
     }
 
     public loadCommands(): void {
@@ -26,12 +24,10 @@ class Client extends OldClient {
             .map(file => path.join(__dirname, 'commands', file))
 
         for (const file of commandFiles) {
-            const rawCmdArray: RawCommand[] = require(file).default
+            if (!file.endsWith('utils.ts')) continue
+            const commandArray = require(file).default
 
-            for (const rawCmd of rawCmdArray) {
-                const command = new ClientCommand(rawCmd)
-                rawCmd.aliases.forEach(alias => this.commands[alias] = command)
-            }
+            for (const clientCommand of commandArray) this.commands.push(new clientCommand())
         }
     }
 

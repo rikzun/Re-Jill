@@ -2,9 +2,9 @@ import { randint } from './functions'
 
 declare global {
     interface String {
-        isNumber(): boolean
+        isNumber: boolean
         indexOfAll(elem: string): number[]
-        matchG(regexp: RegExp): RegExpMatchArray[]
+        matchAll(regexp: RegExp): RegExpMatchArray[]
     }
     interface Number {
         numsafterdot(): number
@@ -18,18 +18,19 @@ declare global {
     interface Object {
         randomKey(): string
         randomValue(): unknown
-        empty: boolean
+        empty: boolean,
+        getKeyByValue(value: unknown): string
     }
 }
 
 Object.defineProperty(String.prototype, 'isNumber', {
-    value: function() {
+    get: function(): boolean {
         return /^\d*\.?\d+$/gm.test(this)
     }
 })
 
 Object.defineProperty(String.prototype, 'indexOfAll', {
-    value: function(elem: string):number[] {
+    value: function(elem: string): number[] {
         let text = this.repeat(1)
         const amount = text.match(new RegExp(elem, 'g')).length
         const indices = []
@@ -43,8 +44,8 @@ Object.defineProperty(String.prototype, 'indexOfAll', {
     }
 })
 
-Object.defineProperty(String.prototype, 'matchG', {
-    value: function(regexp) {
+Object.defineProperty(String.prototype, 'matchAll', {
+    value: function(regexp: RegExp): RegExpMatchArray[] {
         const arr = []
         for (let match = regexp.exec(this); true; match = regexp.exec(this)) {
             if (match == null || !regexp.global) break
@@ -56,7 +57,7 @@ Object.defineProperty(String.prototype, 'matchG', {
 })
 
 Object.defineProperty(Number.prototype, 'numsafterdot', {
-    value: function() {
+    value: function(): number {
         const [, fl] = String(this).split('.')
         return fl.length ?? 0
     }
@@ -70,39 +71,45 @@ Object.defineProperty(Array.prototype, 'add', {
 })
 
 Object.defineProperty(Array.prototype, 'randomKey', {
-    value: function() {
+    value: function(): number {
         return randint(0, this.length - 1)
     }
 })
 
 Object.defineProperty(Array.prototype, 'randomValue', {
-    value: function() {
+    value: function(): unknown {
         return this[randint(0, this.length - 1)]
     }
 })
 
 Object.defineProperty(Array.prototype, 'empty', {
-    get: function() {
+    get: function(): boolean {
         return this.length == 0
     }
 })
 
 Object.defineProperty(Object.prototype, 'randomKey', {
-    value: function() {
+    value: function(): string {
         const keys = Object.keys(this)
         return keys[randint(0, keys.length - 1)]
     }
 })
 
 Object.defineProperty(Object.prototype, 'randomValue', {
-    value: function() {
+    value: function(): unknown {
         const values = Object.values(this)
         return values[randint(0, values.length - 1)]
     }
 })
 
 Object.defineProperty(Object.prototype, 'empty', {
-    get: function() {
+    get: function(): boolean {
         return Object.keys(this).length == 0
+    }
+})
+
+Object.defineProperty(Object.prototype, 'getKeyByValue', {
+    value: function(value: unknown): string {
+        return Object.keys(this).find(key => this[key] === value) ?? ''
     }
 })
