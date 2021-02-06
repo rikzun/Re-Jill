@@ -1,7 +1,6 @@
 export { client }
 import { Client as OldClient, ClientOptions } from 'discord.js'
 import { ClientCommand } from './utils/classes'
-import { DISCORD_TOKEN } from './config'
 import * as path from 'path'
 import * as fs from 'fs' 
 import './utils/proto'
@@ -15,7 +14,7 @@ class Client extends OldClient {
         super(options)
 
         this.owner = '532935768918982656'
-        this.prefix = '//'
+        this.prefix = './'
         this.commands = []
     }
 
@@ -42,7 +41,7 @@ class Client extends OldClient {
 const client = new Client()
 client.loadCommands()
 client.loadEvents()
-client.login(DISCORD_TOKEN)
+client.login(process.env.DISCORD_TOKEN ?? require('../config.json').DISCORD_TOKEN)
 
 client.on('ready', () => {
     console.log('Jill готова к работе')
