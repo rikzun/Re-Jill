@@ -1,3 +1,4 @@
+import { split } from 'ts-node'
 import { randint } from './functions'
 
 declare global {
@@ -5,12 +6,13 @@ declare global {
         isNumber: boolean
         indexOfAll(elem: string): number[]
         matchAll(regexp: RegExp): RegExpMatchArray[]
+        ssplit(separator: string): string[]
     }
     interface Number {
         numsafterdot(): number
     }
     interface Array<T> {
-        add(elem: any, check?: any): this
+        add(elem1: unknown, bool?: unknown, elem2?:unknown): this
         randomKey(): number
         randomValue(): unknown
         empty: boolean
@@ -56,6 +58,20 @@ Object.defineProperty(String.prototype, 'matchAll', {
     }
 })
 
+Object.defineProperty(String.prototype, 'ssplit', {
+    value: function(separator: string): string[] {
+        const split = this.split(separator)
+        const rt = []
+
+        for (let i = 0; i < split.length; i++) {
+            const rtv = [separator, split[i]]
+            if (i == 0) rtv.shift()
+            rt.push(...rtv)
+        }
+        return rt
+    }
+})
+
 Object.defineProperty(Number.prototype, 'numsafterdot', {
     value: function(): number {
         const [, fl] = String(this).split('.')
@@ -64,8 +80,10 @@ Object.defineProperty(Number.prototype, 'numsafterdot', {
 })
 
 Object.defineProperty(Array.prototype, 'add', {
-    value: function(elem: any, check: any = true) {
-        if (check) this.push(elem)
+    value: function(elem1: unknown, bool: unknown = true, elem2: unknown) {
+        if (bool) {
+            this.push(elem1)
+        } else if(elem2) this.push(elem2)
         return this
     }
 })

@@ -72,6 +72,12 @@ client.on('message', async (message: Message) => {
     for (const clientArgument of clientCommand.args) {
         messageCommandArgument = messageArgs[messageCommandArgIndex]
 
+        if (clientArgument.required && !messageCommandArgument) {
+            const Embed = new MessageEmbed()
+                .setDescription(`🚫 Вы пропустили обязательный аргумент \`${clientArgument.name}\``)
+            return message.channel.send(Embed)
+        }
+
         switch(clientArgument.features) {
             case 'array': {
                 messageCommandArgument = messageArgs.splice(messageCommandArgIndex, messageArgs.length)
@@ -85,12 +91,8 @@ client.on('message', async (message: Message) => {
         }
 
         switch (clientArgument.type) {
-            case 'string': {
-                if (Array.isArray(messageCommandArgument)) {
-                    transferArgs.push(messageCommandArgument.map(v => typeof v == 'string' ? v : String(v)))
-                    break
-                }
-                transferArgs.push(typeof messageCommandArgument == 'string' ? messageCommandArgument : String(messageCommandArgument))
+            default: {
+                transferArgs.push(messageCommandArgument)
                 break
             }
 
@@ -146,5 +148,4 @@ client.on('message', async (message: Message) => {
     }
 
     await clientCommand.execute(...transferArgs)
-    clientCommand.clear()
 })

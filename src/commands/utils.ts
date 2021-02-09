@@ -1,4 +1,4 @@
-import { Collection, DMChannel, Message } from 'discord.js'
+import { Collection, Message } from 'discord.js'
 import { ClientCommand, CommandOptions, MessageEmbed } from '../utils/classes'
 import { emojis } from '../events/emojiData'
 import { emojiRegex, unicodeEmojiRegex } from '../utils/regex'
@@ -8,14 +8,14 @@ const commandArray = [
         separator: string
 
         public constructor() {
-            const options: CommandOptions = {
+            const options = new CommandOptions({
                 aliases: ['emoji', 'em'],
-                description: 'Получить эмодзи с любого сервера на котором находится бот.',
+                description: 'Выводит эмодзи.',
                 args: [
                     {
-                        name: '...content',
+                        name: 'emojiArray',
                         description: 'Строка из эмодзи.',
-                        type: 'string',
+                        required: true,
                         features: 'array'
                     }
                 ],
@@ -26,25 +26,24 @@ const commandArray = [
                         execute: (message: Message)=>{ return this.sendHelp(message) }
                     },
                     {
-                        aliases: ['-ws'],
-                        description: 'Не использовать пробелы в сообщении.',
-                        execute: ()=>{ this.separator = '' }
+                        aliases: ['-s'],
+                        description: 'Использовать пробелы в сообщении.',
+                        execute: (message: Message)=>{ this.separator = ' ' }
                     }
                 ]
-            }
+            })
             super(options)
 
-            this.separator = ' '
+            this.separator = ''
         }
 
-        public clear(): void {
-            this.separator = ' '
-        }
+        public async execute(message: Message, emojiArray: string[]): Promise<void> {
+            this.separator = ''
 
-        public async execute(message: Message, content: string[]): Promise<void> {
+            emojiArray = this._contentFix(emojiArray)
             const rt = []
 
-            for (const char of content.map(v => v.toLocaleLowerCase())) {
+            for (const char of emojiArray.map(v => v.toLocaleLowerCase())) {
                 if (!char) continue
 
                 const emojiStringRegex = char.match(emojiRegex)
@@ -58,7 +57,7 @@ const commandArray = [
                 }
                 if (char.isNumber) matches.push(...emojis.filter(v => v.id == char))
 
-                if (unicodeEmoji) {
+                if (unicodeEmoji || char == '\n') {
                     matches.push(char)
                 } else {
                     matches.push(...emojis.filter(v => v.name.toLocaleLowerCase() == char.toLocaleLowerCase()))
@@ -101,10 +100,16 @@ const commandArray = [
             message.channel.send(text)
         }
 
+        private _contentFix(emojiArray: string[]): string[] {
+            const rt = []
+            emojiArray.forEach(v => rt.push(...v.ssplit('\n')))
+            return rt
+        }
+
         private _choose(message: Message, options: string[]): void {
             const Embed = new MessageEmbed()
                 .setTitle('Найдено несколько совпадений...')
-                .setDescription(options.map((v, i) => `\`${i+1}\`: ${v}`))
+                .setDescription(options.map((v, i) => `\`${i + 1}\`\n${v}\n`))
                 .setFooter('В течении 20с отправьте номер варианта.')
 
             const sentMessage = message.channel.send(Embed)
@@ -114,18 +119,22 @@ const commandArray = [
                 { time: 20000 }
             )
             collector.on('collect', async (msg: Message) => {
-                if (msg.content.isNumber && options[Number(msg.content) - 1]) {
-                    collector.stop()
-                    if (!(message.channel instanceof DMChannel) && message.channel.permissionsFor(message.client.user).has(['MANAGE_MESSAGES'])) {
-                        (await sentMessage).delete()
-                        msg.delete()
-                    }
+                if (!msg.content.isNumber && !options[Number(msg.content) - 1]) return
 
-                    this._send(message, options[Number(msg.content) - 1])
-                }
+                collector.stop()
+                this._send(message, options[Number(msg.content) - 1])
+
+                try {
+                    await (await sentMessage).delete()
+                    await msg.delete()
+                } catch (e) {}
             })
             collector.on('end', async (collected: Collection<string, Message>, reason: string) => {
-                if (reason == 'time') (await sentMessage).delete()
+                if (reason !== 'time') return
+                
+                try {
+                    await (await sentMessage).delete()
+                } catch (e) {}
             })
         }
     }

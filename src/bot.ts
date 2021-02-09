@@ -23,7 +23,7 @@ class Client extends OldClient {
             .map(file => path.join(__dirname, 'commands', file))
 
         for (const file of commandFiles) {
-            if (!file.endsWith('utils.ts')) continue
+            if (file.endsWith('system.ts')) continue
             const commandArray = require(file).default
 
             for (const clientCommand of commandArray) this.commands.push(new clientCommand())
