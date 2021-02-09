@@ -37,6 +37,8 @@ const commandArray = [
         public clear() {}
 
         public async execute(message: Message, searchQuery: string) {
+            this.page = 0
+            this.buffer = []
             if (!searchQuery) searchQuery = ''
             const matches = emojis.filter(v => v.name.includes(searchQuery))
 
