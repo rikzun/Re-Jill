@@ -1,6 +1,7 @@
 export { client }
 import { Client as OldClient, ClientOptions } from 'discord.js'
 import { ClientCommand } from './utils/classes'
+import { CLIENT_TOKEN, CLIENT_PREFIX, CLIENT_OWNER } from './config'
 import * as path from 'path'
 import * as fs from 'fs' 
 import './utils/proto'
@@ -13,36 +14,36 @@ class Client extends OldClient {
     constructor(options?: ClientOptions) {
         super(options)
 
-        this.owner = '532935768918982656'
-        this.prefix = './'
+        this.owner = CLIENT_OWNER
+        this.prefix = CLIENT_PREFIX
         this.commands = []
     }
 
-    public loadCommands(): void {
-        const commandFiles = fs.readdirSync(path.join(__dirname, 'commands'))
+    public load_commands(): void {
+        const command_files = fs.readdirSync(path.join(__dirname, 'commands'))
             .map(file => path.join(__dirname, 'commands', file))
 
-        for (const file of commandFiles) {
+        for (const file of command_files) {
             if (file.endsWith('system.ts')) continue
-            const commandArray = require(file).default
+            const command_array = require(file).default
 
-            for (const clientCommand of commandArray) this.commands.push(new clientCommand())
+            for (const client_command of command_array) this.commands.push(new client_command())
         }
     }
 
-    public loadEvents(): void {
-        const eventFiles = fs.readdirSync(path.join(__dirname, 'events'))
+    public load_events(): void {
+        const event_files = fs.readdirSync(path.join(__dirname, 'events'))
             .map(file => path.join(__dirname, 'events', file))
 
-        for (const file of eventFiles) require(file)
+        for (const file of event_files) {
+            require(file)
+        }
     }
 }
 
 const client = new Client()
-client.loadCommands()
-client.loadEvents()
-client.login(process.env.DISCORD_TOKEN ?? require('../config.json').DISCORD_TOKEN)
+client.load_commands()
+client.load_events()
+client.login(CLIENT_TOKEN)
 
-client.on('ready', () => {
-    console.log('Jill готова к работе')
-})
+client.on('ready', () => console.log(true))

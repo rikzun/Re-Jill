@@ -1,15 +1,17 @@
-export { ClientCommand, CommandOptions, MessageEmbed, Parameter }
-import { PermissionString, MessageEmbed as OldMessageEmbed, ClientOptions as OldClientOptions, GuildMember, Message } from 'discord.js'
+export { ClientCommand, CommandOptions, MessageEmbed, Argument, Client_Args, Client_Pars }
+import { PermissionString, MessageEmbed as OldMessageEmbed, Message } from 'discord.js'
 
 type Constructors =
-| 'number'
-| 'GuildMember[]'
+| 'Message'
+| 'Number'
+| 'GuildMembers'
+| 'Guilds'
 
 type Features =
-| 'array'
 | 'join'
+| 'array'
 
-interface Arguments {
+interface Argument {
     name: string
     description: string
     required: boolean
@@ -18,85 +20,102 @@ interface Arguments {
 }
 
 interface Parameter {
-    aliases: string[]
+    names: string[]
     description: string
-    execute: Function
+    args: Argument[]
 }
 
-class CommandOptions {
-    aliases: string[]
-    description?: string
+interface Client_Args {
+    [arg_name: string]: unknown
+}
+
+interface Client_Pars {
+    [par_name: string]: Client_Args
+}
+
+interface CommandOptions {
+    names: string[]
+    description: string
     
-    clientPerms?: PermissionString[]
-    memberPerms?: PermissionString[]
+    client_perms: PermissionString[]
+    member_perms: PermissionString[]
 
-    ownerOnly?: boolean
-    guildOnly?: boolean
+    owner_only: boolean
+    guild_only: boolean
 
-    args?: Arguments[]
-    parameters?: Parameter[]
-
-    constructor(options: CommandOptions) {
-        this.aliases = options.aliases
-        this.description = options.description ?? ''
-
-        this.clientPerms = options.clientPerms ?? []
-        this.memberPerms = options.memberPerms ?? []
-
-        this.ownerOnly = options.ownerOnly ?? false
-        this.guildOnly = options.guildOnly ?? false
-
-        this.args = options.args ?? []
-        this.parameters = options.parameters ?? []
-    }
+    args: Argument[]
+    pars: Parameter[]
 }
 
 abstract class ClientCommand {
-    readonly aliases: string[]
+    readonly names: string[]
     readonly description: string
-    readonly args: Arguments[]
-    readonly parameters: Parameter[]
 
-    readonly clientPerms: PermissionString[]
-    readonly memberPerms: PermissionString[]
+    readonly client_perms: PermissionString[]
+    readonly member_perms: PermissionString[]
 
-    readonly ownerOnly: boolean
-    readonly guildOnly: boolean
+    readonly owner_only: boolean
+    readonly guild_only: boolean
+
+    readonly args: Argument[]
+    readonly pars: Parameter[]
     
     constructor(options: CommandOptions) {
-        this.aliases = options.aliases
+        this.names = options.names
         this.description = options.description
+
+        this.client_perms = options.client_perms
+        this.member_perms = options.member_perms
+
+        this.owner_only = options.owner_only
+        this.guild_only = options.guild_only
+
         this.args = options.args
-        this.parameters = options.parameters
-
-        this.clientPerms = options.clientPerms
-        this.memberPerms = options.memberPerms
-
-        this.ownerOnly = options.ownerOnly
-        this.guildOnly = options.guildOnly
-
-        for (let i = 0; i < this.args.length; i++) {
-            if (this.args[i].features == 'array') this.args[i].name = '...' + this.args[i].name
-            if (this.args[i].features == 'join') this.args[i].name = this.args[i].name + '*'
-            if (!this.args[i].required) this.args[i].name = this.args[i].name + '?'
-        }
+        this.pars = options.pars
     }
 
-    abstract execute(...args: unknown[]): Promise<unknown>
-    async sendHelp(message: Message): Promise<void> {
-        const args = this.args.map(v => `\t${v.name}\n\t\t${v.description}\n`)
-        const parameters = this.parameters.map(v => `\t${v.aliases.join(', ')}\n\t\t${v.description}`)
+    abstract execute(args: Client_Args, pars: Client_Pars): Promise<unknown>
+    async send_help(message: Message): Promise<void> {
+        const args = []
+        const pars = []
+
+        for (const arg of this.args) {
+            if (arg.type == 'Message') continue
+
+            let first_line = arg.name
+            if (arg.features == 'array') first_line = '...' + first_line
+            if (arg.features == 'join') first_line += '*'
+            if (!arg.required) first_line += '?'
+
+            args.push(`  ${first_line}\n    ${arg.description}\n`)
+        }
+        for (const par of this.pars) {
+            let first_line = par.names.join(', ')
+
+            if (!par.args.empty) first_line += ' ' + par.args.map(vv => {
+                let first_line_arg = vv.name
+                if (vv.features == 'array') first_line_arg = '...' + first_line_arg
+                if (vv.features == 'join') first_line_arg += '*'
+                if (!vv.required) first_line_arg += '?'
+
+                return `<${first_line_arg}>`
+            }).join(', ')
+
+            pars.push(`  ${first_line}\n    ${par.description}\n`)
+        }
 
         const desc = []
+            .add('```autohotkey')
             .add('Описание:')
-            .add(`\t${this.description}\n`, this.description, '\tотсутствует\n')
+            .add(`  ${this.description}\n`)
             .add('Аргументы:')
-            .add(args.join('\n'), !args.empty, '\tотсутствуют\n')
+            .add(args.join('\n'), !args.empty, '  отсутствуют\n')
             .add('Параметры:')
-            .add(parameters.join('\n'), !parameters.empty, '\tотсутствуют\n')
+            .add(pars.join('\n'), !pars.empty, '  отсутствуют\n')
+            .add('```')
 
         const Embed = new MessageEmbed()
-            .setDescription('```autohotkey\n' + desc.join('\n') + '```')
+            .setDescription(desc.join('\n'))
         await message.channel.send(Embed)
     }
 }

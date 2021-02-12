@@ -1,108 +1,123 @@
-import { Collection, Message } from 'discord.js'
-import { ClientCommand, CommandOptions, MessageEmbed } from '../utils/classes'
-import { emojis } from '../events/emojiData'
-import { emojiRegex, unicodeEmojiRegex } from '../utils/regex'
+import { Collection, Message, DMChannel } from 'discord.js'
+import { ClientCommand, MessageEmbed, Client_Args, Client_Pars } from '../utils/classes'
+import { emoji_regex, unicode_emoji_regex } from '../utils/regex'
+import { emojis } from '../events/emoji_data'
 
-const commandArray = [
+const command_array = [
     class EmojiCommand extends ClientCommand {
-        separator: string
-
         public constructor() {
-            const options = new CommandOptions({
-                aliases: ['emoji', 'em'],
+            super({
+                names: ['emoji', 'em'],
                 description: 'Выводит эмодзи.',
+                client_perms: [],
+                member_perms: [],
+                owner_only: false,
+                guild_only: false,
                 args: [
                     {
-                        name: 'emojiArray',
+                        name: 'message',
+                        description: 'Экземпляр сообщения.',
+                        type: 'Message',
+                        required: false
+                    },
+                    {
+                        name: 'emoji_array',
                         description: 'Строка из эмодзи.',
                         required: true,
                         features: 'array'
                     }
                 ],
-                parameters: [
+                pars: [
                     {
-                        aliases: ['--help', '-h'],
+                        names: ['--help', '-h', '-?'],
                         description: 'Отображение сведений об использовании.',
-                        execute: (message: Message)=>{ return this.sendHelp(message) }
+                        args: []
                     },
                     {
-                        aliases: ['-s'],
-                        description: 'Использовать пробелы в сообщении.',
-                        execute: (message: Message)=>{ this.separator = ' ' }
+                        names: ['-s'],
+                        description: 'Использовать пробелы как разделитель эмодзи.',
+                        args: []
                     }
                 ]
             })
-            super(options)
-
-            this.separator = ''
         }
 
-        public async execute(message: Message, emojiArray: string[]): Promise<void> {
-            this.separator = ''
-
-            emojiArray = this._contentFix(emojiArray)
-            const rt = []
-
-            for (const char of emojiArray.map(v => v.toLocaleLowerCase())) {
-                if (!char) continue
-
-                const emojiStringRegex = char.match(emojiRegex)
-                const unicodeEmoji = char.match(unicodeEmojiRegex)
-                const matches = []
-
-                if (emojiStringRegex) {
-                    matches.push(...emojis.filter(v => 
-                        v.name.toLocaleLowerCase() == emojiStringRegex[1].toLocaleLowerCase() || v.id == emojiStringRegex[2]
-                    ))
+        public async execute(args: Client_Args, pars: Client_Pars): Promise<unknown> {
+            const message = args.message as Message
+            let separator = ''
+            for (const [par, par_args] of Object.entries(pars)) {
+                switch (par) {
+                    case '--help': return this.send_help(message)
+                    case '-s': separator = ' '
                 }
-                if (char.isNumber) matches.push(...emojis.filter(v => v.id == char))
-
-                if (unicodeEmoji || char == '\n') {
-                    matches.push(char)
-                } else {
-                    matches.push(...emojis.filter(v => v.name.toLocaleLowerCase() == char.toLocaleLowerCase()))
-                }
-
-                if (matches.empty) matches.push('❌')
-                
-                rt.push(matches)
             }
+            
+            const emoji_array = this._contentFix(args.emoji_array as string[])
+            const matches = this._find_emojis(emoji_array)
 
-            //some emojis
-            if (!rt.filter(v => v.length > 1).empty) {
+            //some emojis check
+            if (!matches.filter(v => v.length > 1).empty) {
                 const options = []
                 const positions = []
 
-                for (let i = 0; i < rt.length; i++) positions.push(0)
+                for (let i = 0; i < matches.length; i++) positions.push(0)
 
                 while (true) {
-                    options.push(positions.map((pos, index) => rt[index][pos]).join(this.separator))
+                    options.push(positions.map((pos, index) => matches[index][pos]).join(separator))
                 
                     let found_increment = false
                     for (let i = 0; i < positions.length; i++) {
                         positions[i]++
 
-                        if (positions[i] < rt[i].length) {
+                        if (positions[i] < matches[i].length) {
                             found_increment = true
                             break
-                        } else { positions[i] = 0 }
+                        } else { 
+                            positions[i] = 0 
+                        }
                     }
                 
                     if (!found_increment) break
                 }
                 return this._choose(message, options)
             }
-            
-            return this._send(message, rt.join(this.separator))
+
+            return message.channel.send(matches.join(separator))
         }
 
-        private _send(message: Message, text: string): void {
-            message.channel.send(text)
-        }
-
-        private _contentFix(emojiArray: string[]): string[] {
+        private _contentFix(emoji_array: string[]): string[] {
             const rt = []
-            emojiArray.forEach(v => rt.push(...v.ssplit('\n')))
+            emoji_array.forEach(v => rt.push(...v.ssplit('\n')))
+            return rt
+        }
+
+        private _find_emojis(emoji_array: string[]): unknown[][] {
+            const rt = []
+
+            for (const char of emoji_array.map(v => v.toLocaleLowerCase())) {
+                if (!char) continue
+
+                const emoji_string_regex = char.match(emoji_regex)
+                const unicode_emoji = char.match(unicode_emoji_regex)
+                const matches = []
+
+                if (emoji_string_regex) {
+                    matches.push(...emojis.filter(v => 
+                        v.name.toLocaleLowerCase() == emoji_string_regex[1] || v.id == emoji_string_regex[2]
+                    ))
+                }
+                if (char.isNumber) matches.push(...emojis.filter(v => v.id == char))
+
+                if (unicode_emoji || char == '\n') {
+                    matches.push(char)
+                } else {
+                    matches.push(...emojis.filter(v => v.name.toLocaleLowerCase() == char))
+                }
+
+                if (matches.empty) matches.push('❌')
+                rt.push(matches)
+            }
+
             return rt
         }
 
@@ -112,8 +127,7 @@ const commandArray = [
                 .setDescription(options.map((v, i) => `\`${i + 1}\`\n${v}\n`))
                 .setFooter('В течении 20с отправьте номер варианта.')
 
-            const sentMessage = message.channel.send(Embed)
-
+            const sent_message = message.channel.send(Embed)
             const collector = message.channel.createMessageCollector(
                 msg => msg.author.id == message.author.id, 
                 { time: 20000 }
@@ -122,22 +136,29 @@ const commandArray = [
                 if (!msg.content.isNumber && !options[Number(msg.content) - 1]) return
 
                 collector.stop()
-                this._send(message, options[Number(msg.content) - 1])
+                message.channel.send(options[Number(msg.content) - 1])
 
                 try {
-                    await (await sentMessage).delete()
-                    await msg.delete()
-                } catch (e) {}
+                    await (await sent_message).delete()
+                } catch (error) {}
+
+                if (!(message.channel instanceof DMChannel)) {
+                    const channel_permissions = message.channel.permissionsFor(message.client.user)
+
+                    if (channel_permissions.has('MANAGE_MESSAGES')) {
+                        await msg.delete()
+                    }
+                }
             })
             collector.on('end', async (collected: Collection<string, Message>, reason: string) => {
                 if (reason !== 'time') return
                 
                 try {
-                    await (await sentMessage).delete()
-                } catch (e) {}
+                    await (await sent_message).delete()
+                } catch (error) {}
             })
         }
     }
 ]
 
-export default commandArray
+export default command_array

@@ -1,124 +1,236 @@
-import { Collection, GuildEmoji, Message, MessageReaction } from 'discord.js'
-import { ClientCommand, CommandOptions, MessageEmbed } from '../utils/classes'
-import { emojis } from '../events/emojiData'
-import { emojiRegex, unicodeEmojiRegex } from '../utils/regex'
+import { Collection, Message, MessageReaction, DMChannel, GuildEmoji, Guild } from 'discord.js'
+import { ClientCommand, MessageEmbed, Client_Args, Client_Pars } from '../utils/classes'
+import { emojis } from '../events/emoji_data'
 
 const commandArray = [
     class EmojiSearchCommand extends ClientCommand {
-        page: number
-        buffer: string[]
-
         public constructor() {
-            const options = new CommandOptions({
-                aliases: ['searchemoji', 'sem'],
+            super({
+                names: ['searchemoji', 'sem'],
                 description: 'Ищет требуемый эмодзи.',
+                client_perms: [],
+                member_perms: [],
+                owner_only: false,
+                guild_only: false,
                 args: [
                     {
-                        name: 'searchQuery',
+                        name: 'message',
+                        description: 'Экземпляр сообщения.',
+                        type: 'Message',
+                        required: false
+                    },
+                    {
+                        name: 'search_query',
                         description: 'Запрос поиска.',
                         required: false,
                         features: 'join'
                     }
                 ],
-                parameters: [
+                pars: [
                     {
-                        aliases: ['--help', '-h'],
+                        names: ['--help', '-h', '-?'],
                         description: 'Отображение сведений об использовании.',
-                        execute: (message: Message)=>{ return this.sendHelp(message) }
+                        args: []
+                    },
+                    {
+                        names: ['--guild', '-g'],
+                        description: 'Поиск эмодзи с определённого сервера.',
+                        args: [
+                            {
+                                name: 'guild_array',
+                                description: 'Имя, либо id гильдии.',
+                                type: 'Guilds',
+                                required: true,
+                                features: 'join'
+                            }
+                        ]
+                    },
+                    {
+                        names: ['-ai'],
+                        description: 'Отображение дополнительной информации.',
+                        args: []
+                    },
+                    {
+                        names: ['--ignore-case', '-ic'],
+                        description: 'При поиске игнорировать регистр.',
+                        args: []
+                    },
+                    {
+                        names: ['--direct-search', '-ds'],
+                        description: 'Искать абсолютные совпадения.',
+                        args: []
                     }
                 ]
             })
-            super(options)
-
-            this.page = 0
-            this.buffer = []
         }
 
-        public clear() {}
+        public async execute(args: Client_Args, pars: Client_Pars): Promise<unknown> {
+            const message = args.message as Message
+            const search_query = args.search_query as string ?? ''
+            let target = emojis
+            let matches = target.filter(v => v.name.includes(search_query))
+            let addinf = false
 
-        public async execute(message: Message, searchQuery: string) {
-            this.page = 0
-            this.buffer = []
-            if (!searchQuery) searchQuery = ''
-            const matches = emojis.filter(v => v.name.includes(searchQuery))
+            for (const [par, par_args] of Object.entries(pars)) {
+                switch (par) {
+                    case '--help': return this.send_help(message)
+                    case '-ai': addinf = true; break
+                    case '--guild': {
+                        const guild_array = par_args.guild_array as Guild[]
 
+                        if (guild_array.empty) {
+                            const Embed = new MessageEmbed()
+                                .setDescription('🚫 Не удалось найти гильдию.')
+                            return message.channel.send(Embed)
+                        }
+
+                        if (guild_array.length == 1) {
+                            target = guild_array[0].emojis.cache.array()
+                            matches = target.filter(v => v.name.includes(search_query))
+                        } else {
+                            return choose(message, guild_array)
+                        }
+                        break
+                    }
+                    case '--ignore-case': {
+                        matches = target.filter(v => v.name.toLocaleLowerCase().includes(search_query.toLocaleLowerCase()))
+                        break
+                    }
+                    case '--direct-search': {
+                        matches = target.filter(v => v.name == search_query)
+                        break
+                    }
+                }
+            }
+
+            const buffer = []
+            let page = 0
             let text = ''
             for (const emoji of matches) {
-                const stringEmoji = `<${emoji.animated ? 'a' : ''}:${emoji.name}:${emoji.id}>`
-                
-                if (text.length + stringEmoji.length > 2048) {
-                    this.buffer.push(text)
+                const string_emoji = `<${emoji.animated ? 'a' : ''}:${emoji.name}:${emoji.id}>`
+                let totext = string_emoji
+
+                if (addinf) {
+                    totext = string_emoji + ' ' + emoji.name + '\n' +
+                    '`emoji id:` `' + emoji.id + '`\n' +
+                    '`guild id:` `' + emoji.guild.id + '`\n' +
+                    '`guild name:` `' + emoji.guild.name + '`\n\n'
+                }
+
+                if (text.length + totext.length > 2048) {
+                    buffer.push(text)
                     text = ''
                     continue
                 }
-                text += stringEmoji
+                text += totext
             }
 
-            if (text) this.buffer.push(text)
+            if (text) buffer.push(text)
+            const sent_message = await message.channel.send(content())
 
-            const sentMessage = await message.channel.send(this._content())
+            if (buffer.length > 1) {
+                await sent_message.react('⏮️')
+                await sent_message.react('⏪')
+                await sent_message.react('⏩')
+                await sent_message.react('⏭️')
 
-            if (this.buffer.length > 1) {
-                await sentMessage.react('⏮️')
-                await sentMessage.react('⏪')
-                await sentMessage.react('⏩')
-                await sentMessage.react('⏭️')
-
-                const collector = sentMessage.createReactionCollector(
+                const collector = sent_message.createReactionCollector(
                     (reaction, user) => user.id == message.author.id, 
                     { time: 120000, dispose: true }
                 )
                 
-                collector.on('collect', async(reaction: MessageReaction) => this._pageMove(reaction, sentMessage))
-                collector.on('remove', async(reaction: MessageReaction) => this._pageMove(reaction, sentMessage))
+                collector.on('collect', async(reaction: MessageReaction) => page_move(reaction))
+                collector.on('remove', async(reaction: MessageReaction) => page_move(reaction))
                 collector.on('end', async(collected: Collection<string, Message>, reason: string) => {
                     if (reason !== 'time') return
+                    if (!(message.channel instanceof DMChannel)) {
+                        const channel_permissions = message.channel.permissionsFor(message.client.user)
+    
+                        if (channel_permissions.has('MANAGE_MESSAGES')) {
+                            await sent_message.reactions.removeAll()
+                        }
+                    }
+                })
+
+                async function page_move(reaction: MessageReaction): Promise<void> {
+                    switch (reaction.emoji.name) {
+                        case '⏮️': {
+                            if (page == 0) break
+                            page = 0
+        
+                            await sent_message.edit(content())
+                            break
+                        }
+        
+                        case '⏪': {
+                            if (page == 0) break
+                            page--
+        
+                            await sent_message.edit(content())
+                            break
+                        }
+                            
+                        case '⏩': {
+                            if (page + 1 == buffer.length) break
+                            page++
+        
+                            await sent_message.edit(content())
+                            break
+                        }
+        
+                        case '⏭️': {
+                            if (page == buffer.length - 1) break
+                            page = buffer.length - 1
+        
+                            await sent_message.edit(content())
+                            break
+                        }
+                    }
+                }
+            }
+
+            function content(): MessageEmbed {
+                return new MessageEmbed()
+                    .setTitle(`Страница ${buffer.length !== 0? page+1 : 0}/${buffer.length} Всего эмодзи ${target.length}`)
+                    .setDescription(buffer[page] ?? 'пусто')
+            }
+            function choose(message: Message, guild_array: Guild[]): void {
+                const Embed = new MessageEmbed()
+                    .setTitle('Найдено несколько совпадений...')
+                    .setDescription(guild_array.map((v, i) => `\`${i + 1}\` \`${v}\`\n`))
+                    .setFooter('В течении 20с отправьте номер варианта.')
+    
+                const sent_message = message.channel.send(Embed)
+                const collector = message.channel.createMessageCollector(
+                    msg => msg.author.id == message.author.id, 
+                    { time: 20000 }
+                )
+                collector.on('collect', async (msg: Message) => {
+                    if (!msg.content.isNumber && !guild_array[Number(msg.content) - 1]) return
+    
+                    collector.stop()
+                    pars['--guild'].guild_array = [guild_array[Number(msg.content) - 1]]
+                    this.execute(args, pars)
+    
                     try {
-                        await sentMessage.reactions.removeAll()
+                        await (await sent_message).delete()
+                    } catch (error) {}
+    
+                    if (!(message.channel instanceof DMChannel)) {
+                        const channel_permissions = message.channel.permissionsFor(message.client.user)
+    
+                        if (channel_permissions.has('MANAGE_MESSAGES')) {
+                            await msg.delete()
+                        }
+                    }
+                })
+                collector.on('end', async (collected: Collection<string, Message>, reason: string) => {
+                    if (reason !== 'time') return
+                    
+                    try {
+                        await (await sent_message).delete()
                     } catch (error) {}
                 })
-            }
-        }
-
-        private _content(): MessageEmbed {
-            return new MessageEmbed()
-                .setTitle(`Страница ${this.page+1}/${this.buffer.length}`)
-                .setDescription(this.buffer[this.page])
-        }
-
-        private async _pageMove(reaction: MessageReaction, sentMessage: Message): Promise<void> {
-            switch (reaction.emoji.name) {
-                case '⏮️': {
-                    if (this.page == 0) break
-                    this.page = 0
-
-                    await sentMessage.edit(this._content())
-                    break
-                }
-
-                case '⏪': {
-                    if (this.page == 0) break
-                    this.page--
-
-                    await sentMessage.edit(this._content())
-                    break
-                }
-                    
-                case '⏩': {
-                    if (this.page + 1 == this.buffer.length) break
-                    this.page++
-
-                    await sentMessage.edit(this._content())
-                    break
-                }
-
-                case '⏭️': {
-                    if (this.page == this.buffer.length - 1) break
-                    this.page = this.buffer.length - 1
-
-                    await sentMessage.edit(this._content())
-                    break
-                }
             }
         }
     }

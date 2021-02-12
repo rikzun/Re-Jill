@@ -1,6 +1,6 @@
-import { Message, TextChannel } from "discord.js"
+import { DMChannel, Message, TextChannel } from "discord.js"
 import { client } from '../bot'
-import { MessageLink } from "./regex"
+import { message_link } from "./regex"
 export { wait, randint, strftime, fetchMessageLink }
 
 function wait(ms: number): Promise<Function> {
@@ -36,14 +36,14 @@ function strftime(num: number, format: string): string {
 }
 
 async function fetchMessageLink(link: string): Promise<Message> {
-    const match = link.match(MessageLink)
+    const match = link.match(message_link)
     if (!match) return
 
     const guild = client.guilds.cache.get(match[1])
     if (!guild) return
 
-    const channel = guild.channels.cache.get(match[2]) as TextChannel
-    if (!channel) return
+    const channel = guild.channels.cache.get(match[2])
+    if (!channel || (!(channel instanceof TextChannel) && !(channel instanceof DMChannel))) return
 
-    return channel.messages.fetch(match[3])
+    return await channel.messages.fetch(match[3])
 }
