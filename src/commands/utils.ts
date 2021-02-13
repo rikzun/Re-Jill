@@ -5,6 +5,12 @@ import { emojis } from '../events/emoji_data'
 
 const command_array = [
     class EmojiCommand extends ClientCommand {
+        message: Message
+        emoji_array: string[]
+        matches: unknown[][]
+        separator: string
+        choise: number
+
         public constructor() {
             super({
                 names: ['emoji', 'em'],
@@ -22,7 +28,7 @@ const command_array = [
                     },
                     {
                         name: 'emoji_array',
-                        description: 'Строка из эмодзи.',
+                        description: 'Строка состоящая из названий эмодзи.',
                         required: true,
                         features: 'array'
                     }
@@ -30,46 +36,71 @@ const command_array = [
                 pars: [
                     {
                         names: ['--help', '-h', '-?'],
-                        description: 'Отображение сведений об использовании.',
+                        description: 'Отобразить сведения об использовании.',
                         args: []
                     },
                     {
                         names: ['-s'],
                         description: 'Использовать пробелы как разделитель эмодзи.',
                         args: []
+                    },
+                    {
+                        names: ['--choise', '-ch'],
+                        description: 'Заранее выбрать возможную вариацию эмодзи.',
+                        args: [
+                            {
+                                name: 'choise',
+                                description: 'Номер выбранного варианта.',
+                                type: 'Number',
+                                required: true
+                            }
+                        ]
                     }
                 ]
             })
         }
 
         public async execute(args: Client_Args, pars: Client_Pars): Promise<unknown> {
-            const message = args.message as Message
-            let separator = ''
+            this.message = args.message as Message
+            this.emoji_array = this._content_fix(args.emoji_array as string[])
+            this.matches = this._find_emojis()
+            this.separator = ''
+            delete this.choise
+
             for (const [par, par_args] of Object.entries(pars)) {
                 switch (par) {
-                    case '--help': return this.send_help(message)
-                    case '-s': separator = ' '
+                    case '--help': {
+                        return this._send_help(this.message)
+                    }
+                    case '-s': {
+                        this.separator = ' '
+                        break
+                    }
+                    case '--choise': {
+                        const num = par_args.choise as number
+                        if (Number.isNaN(num)) break
+
+                        this.choise = num - 1
+                        break
+                    }
                 }
             }
-            
-            const emoji_array = this._contentFix(args.emoji_array as string[])
-            const matches = this._find_emojis(emoji_array)
 
             //some emojis check
-            if (!matches.filter(v => v.length > 1).empty) {
+            if (!this.matches.filter(v => v.length > 1).empty) {
                 const options = []
                 const positions = []
 
-                for (let i = 0; i < matches.length; i++) positions.push(0)
+                for (let i = 0; i < this.matches.length; i++) positions.push(0)
 
                 while (true) {
-                    options.push(positions.map((pos, index) => matches[index][pos]).join(separator))
+                    options.push(positions.map((pos, index) => this.matches[index][pos]).join(this.separator))
                 
                     let found_increment = false
                     for (let i = 0; i < positions.length; i++) {
                         positions[i]++
 
-                        if (positions[i] < matches[i].length) {
+                        if (positions[i] < this.matches[i].length) {
                             found_increment = true
                             break
                         } else { 
@@ -79,22 +110,26 @@ const command_array = [
                 
                     if (!found_increment) break
                 }
-                return this._choose(message, options)
+                if (this.choise !== undefined) {
+                    return this.message.channel.send(options[this.choise] ?? '❌')
+                } else {
+                    return this._choose(options)
+                }
             }
 
-            return message.channel.send(matches.join(separator))
+            return this.message.channel.send(this.matches.join(this.separator))
         }
 
-        private _contentFix(emoji_array: string[]): string[] {
+        private _content_fix(emoji_array: string[]): string[] {
             const rt = []
             emoji_array.forEach(v => rt.push(...v.ssplit('\n')))
             return rt
         }
 
-        private _find_emojis(emoji_array: string[]): unknown[][] {
+        private _find_emojis(): unknown[][] {
             const rt = []
 
-            for (const char of emoji_array.map(v => v.toLocaleLowerCase())) {
+            for (const char of this.emoji_array.map(v => v.toLocaleLowerCase())) {
                 if (!char) continue
 
                 const emoji_string_regex = char.match(emoji_regex)
@@ -121,33 +156,31 @@ const command_array = [
             return rt
         }
 
-        private _choose(message: Message, options: string[]): void {
+        private _choose(options: string[]): void {
             const Embed = new MessageEmbed()
                 .setTitle('Найдено несколько совпадений...')
                 .setDescription(options.map((v, i) => `\`${i + 1}\`\n${v}\n`))
                 .setFooter('В течении 20с отправьте номер варианта.')
 
-            const sent_message = message.channel.send(Embed)
-            const collector = message.channel.createMessageCollector(
-                msg => msg.author.id == message.author.id, 
+            const sent_message = this.message.channel.send(Embed)
+            const collector = this.message.channel.createMessageCollector(
+                msg => msg.author.id == this.message.author.id, 
                 { time: 20000 }
             )
             collector.on('collect', async (msg: Message) => {
-                if (!msg.content.isNumber && !options[Number(msg.content) - 1]) return
+                const num = Number(msg.content)
+                if (Number.isNaN(num) || options.length < num || num < 1) return
 
                 collector.stop()
-                message.channel.send(options[Number(msg.content) - 1])
+                this.message.channel.send(options[num - 1])
 
                 try {
                     await (await sent_message).delete()
                 } catch (error) {}
 
-                if (!(message.channel instanceof DMChannel)) {
-                    const channel_permissions = message.channel.permissionsFor(message.client.user)
-
-                    if (channel_permissions.has('MANAGE_MESSAGES')) {
-                        await msg.delete()
-                    }
+                if (this.message.channel instanceof DMChannel) return
+                if (this.message.channel.permissionsFor(this.message.client.user).has('MANAGE_MESSAGES')) {
+                    await msg.delete()
                 }
             })
             collector.on('end', async (collected: Collection<string, Message>, reason: string) => {

@@ -1,4 +1,4 @@
-export { ClientCommand, CommandOptions, MessageEmbed, Argument, Client_Args, Client_Pars }
+export { ClientCommand, CommandOptions, MessageEmbed, Argument, Client_Args, Client_Pars, Constructors }
 import { PermissionString, MessageEmbed as OldMessageEmbed, Message } from 'discord.js'
 
 type Constructors =
@@ -75,7 +75,7 @@ abstract class ClientCommand {
     }
 
     abstract execute(args: Client_Args, pars: Client_Pars): Promise<unknown>
-    async send_help(message: Message): Promise<void> {
+    protected _send_help(message: Message): void {
         const args = []
         const pars = []
 
@@ -116,7 +116,7 @@ abstract class ClientCommand {
 
         const Embed = new MessageEmbed()
             .setDescription(desc.join('\n'))
-        await message.channel.send(Embed)
+        message.channel.send(Embed)
     }
 }
 

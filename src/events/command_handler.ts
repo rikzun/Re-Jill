@@ -1,16 +1,17 @@
-import { Message } from 'discord.js'
+import { DMChannel, Message } from 'discord.js'
 import { Argument, MessageEmbed } from '../utils/classes'
 import { member_mention, member_username_hash } from '../utils/regex'
+import { tr } from '../utils/translate'
 import { client } from '../bot'
 
 client.on('message', async (message: Message) => await message_handler(message))
 
-async function message_handler(message: Message): Promise<void> {
+async function message_handler(message: Message): Promise<unknown> {
     if (message.author.bot) return
     if (!message.content.startsWith(client.prefix)) return
 
     const [message_cmd_name, ...message_args] = message.content.substring(client.prefix.length).split(' ')
-    const client_cmd = client.commands.find(v => v.names.includes(message_cmd_name))
+    const client_cmd = client.commands.find(v => v.names.includes(message_cmd_name.toLocaleLowerCase()))
 
     if (!client_cmd) return
     const transfer_args = {}
@@ -20,6 +21,49 @@ async function message_handler(message: Message): Promise<void> {
     let arg_message = false
     let pars_indices = []
 
+    //check perms
+    const client_perms = client_cmd.client_perms
+    const member_perms = client_cmd.member_perms
+    if (!(message.channel instanceof DMChannel) && (!client_perms.empty || !member_perms.empty)) {
+
+        if (!client_perms.empty) {
+            const channel_permissions = message.channel.permissionsFor(client.user)
+
+            if (!channel_permissions.has(client_perms)) {
+                const Embed = new MessageEmbed()
+                    .setTitle('Боту не хватает следующих прав')
+                    .setDescription('```\n' + channel_permissions.missing(client_perms).map(v => tr(v)).join('\n') + '```')
+
+                return message.channel.send(Embed)
+            }
+        }
+
+        if (!member_perms.empty) {
+            const channel_permissions = message.channel.permissionsFor(message.member)
+
+            if (!channel_permissions.has(member_perms)) {
+                const Embed = new MessageEmbed()
+                    .setTitle('Вам не хватает следующих прав')
+                    .setDescription('```\n' + channel_permissions.missing(member_perms).map(v => tr(v)).join('\n') + '```')
+
+                return message.channel.send(Embed)
+            }
+        }
+    }
+
+    if (client_cmd.owner_only && message.author.id !== client.owner) {
+        const Embed = new MessageEmbed()
+            .setDescription('🚫 Данная команда доступна только создателю бота')
+        return message.channel.send(Embed)
+    }
+
+    if (client_cmd.guild_only && message.guild == null) {
+        const Embed = new MessageEmbed()
+            .setDescription('🚫 Данная команда доступна только на сервере')
+        return message.channel.send(Embed)
+    }
+
+    //collecting pars names
     for (const par of client_cmd.pars) {
         pars_names.push(...par.names)
 
@@ -28,6 +72,7 @@ async function message_handler(message: Message): Promise<void> {
         pars_indices.push(index)
     }
 
+    //arg handler
     for (let i = 0; i < client_cmd.args.length; i++) {
         let ii = i
         if (arg_message) ii = ii - 1
@@ -49,6 +94,7 @@ async function message_handler(message: Message): Promise<void> {
         }
     }
 
+    //per handler
     for (let i = 0; i < client_cmd.pars.length; i++) {
         const client_cmd_par = client_cmd.pars[i]
         const par_index = message_args.findIndex(v => client_cmd_par.names.includes(v))
@@ -73,6 +119,7 @@ async function message_handler(message: Message): Promise<void> {
         }
     }
 
+    //constructor
     async function transfer_handler(message: Message, client_arg: Argument, value: string, index: number): Promise<unknown> {
         if (client_arg.required && !value) {
             const Embed = new MessageEmbed()
@@ -110,7 +157,7 @@ async function message_handler(message: Message): Promise<void> {
                 const members = await message.guild.members.fetch()
 
                 //id
-                if (value.isNumber) matches.push(members.get(value))
+                if (value.isNumber && members.get(value)) matches.push(members.get(value))
 
                 //mention
                 const mention = value.match(member_mention)
@@ -125,7 +172,6 @@ async function message_handler(message: Message): Promise<void> {
                         v.user.discriminator == username_hash[2]
                     ).forEach(v => matches.push(v))
                 }
-                
 
                 //nickname
                 members.filter(v => 
@@ -149,56 +195,3 @@ async function message_handler(message: Message): Promise<void> {
 
     await client_cmd.execute(transfer_args, transfer_pars)
 }
-
-//     if (!clientCommand.parameters.empty) {
-//         let rt: boolean | undefined
-//         const aliases = []
-
-//         clientCommand.parameters.forEach(v => aliases.push(...v.aliases))
-//         for (const parameter of messageArgs.filter(v => aliases.includes(v))) {
-//             messageArgs.splice(messageArgs.indexOf(parameter), 1)
-//             rt = clientCommand.parameters.find(v => v.aliases.includes(parameter)).execute(message)
-//         }
-//         if (rt) return
-//     }
-
-//     if (!(message.channel instanceof DMChannel) && (!clientCommand.clientPerms.empty || !clientCommand.memberPerms.empty)) {
-
-//         //client permissions
-//         if (!clientCommand.clientPerms.empty) {
-//             const channelPermissions = message.channel.permissionsFor(client.user)
-            
-//             if (!channelPermissions.has(clientCommand.clientPerms)) {
-//                 const Embed = new MessageEmbed()
-//                     .setTitle('Боту не хватает следующих прав')
-//                     .setDescription('```\n' + channelPermissions.missing(clientCommand.clientPerms).map(v => tr(v)).join('\n') + '```')
-
-//                 return message.channel.send(Embed)
-//             }
-//         }
-
-//         //member permissions
-//         if (!clientCommand.memberPerms.empty) {
-//             const channelPermissions = message.channel.permissionsFor(message.member)
-            
-//             if (!channelPermissions.has(clientCommand.memberPerms)) {
-//                 const Embed = new MessageEmbed()
-//                     .setTitle('Вам не хватает следующих прав')
-//                     .setDescription('```\n' + channelPermissions.missing(clientCommand.memberPerms).map(v => tr(v)).join('\n') + '```')
-
-//                 return message.channel.send(Embed)
-//             }
-//         }
-//     }
-
-//     if (clientCommand.ownerOnly && message.author.id !== client.owner) {
-//         const Embed = new MessageEmbed()
-//             .setDescription('🚫 Данная команда разрешена к использованию только создателю бота')
-//         return message.channel.send(Embed)
-//     }
-
-//     if (clientCommand.guildOnly && message.guild == null) {
-//         const Embed = new MessageEmbed()
-//             .setDescription('🚫 Данная команда разрешена к использованию только на сервере')
-//         return message.channel.send(Embed)
-//     }
