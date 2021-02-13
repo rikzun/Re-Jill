@@ -62,8 +62,6 @@ const command_array = [
 
         public async execute(args: Client_Args, pars: Client_Pars): Promise<unknown> {
             this.message = args.message as Message
-            this.emoji_array = this._content_fix(args.emoji_array as string[])
-            this.matches = this._find_emojis()
             this.separator = ''
             delete this.choise
 
@@ -85,6 +83,9 @@ const command_array = [
                     }
                 }
             }
+
+            this.emoji_array = this._content_fix(args.emoji_array as string[])
+            this.matches = this._find_emojis()
 
             //some emojis check
             if (!this.matches.filter(v => v.length > 1).empty) {
