@@ -1,5 +1,5 @@
 import { Collection, Message, MessageReaction, DMChannel, GuildEmoji, Guild, GuildMember } from 'discord.js'
-import { ClientCommand, MessageEmbed, Client_Args, Client_Pars } from '../utils/classes'
+import { ClientCommand, MessageEmbed, Command_Args, Command_Pars } from '../utils/classes'
 import { strftime } from '../utils/functions'
 import { tr } from '../utils/translate'
 import { emojis } from '../events/emoji_data'
@@ -18,21 +18,21 @@ const commandArray = [
         public constructor() {
             super({
                 names: ['searchemoji', 'sem'],
-                description: 'Ищет требуемый эмодзи.',
-                client_perms: [],
-                member_perms: [],
-                owner_only: false,
-                guild_only: false,
+                description: 'Ищет указанный эмодзи.',
+                additional: 'В случае отсутствия аргумента выводит список всех доступных эмодзи.' +
+                'Без использования дополнительных параметров осуществляется вложенный поиск, а так же игнорируется регистр.\n' +
+                '(например при поиске "yes" найдутся "Yes" и "ohYes")',
+                client_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
+                member_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
                 args: [
                     {
                         name: 'message',
-                        description: 'Экземпляр сообщения.',
                         type: 'Message',
                         required: false
                     },
                     {
                         name: 'search_query',
-                        description: 'Запрос поиска состоящий из названия эмодзи.',
+                        description: 'Название эмодзи.',
                         required: false,
                         features: 'join'
                     }
@@ -40,16 +40,14 @@ const commandArray = [
                 pars: [
                     {
                         names: ['--help', '-h', '-?'],
-                        description: 'Отобразить сведения об использовании.',
-                        args: []
+                        description: 'Отобразить сведения об использовании.'
                     },
                     {
                         names: ['--guild', '-g'],
-                        description: 'Искать эмодзи на определённом сервере.',
+                        description: 'Искать эмодзи только на определённом сервере.',
                         args: [
                             {
                                 name: 'guild_array',
-                                description: 'Имя, либо id гильдии.',
                                 type: 'Guilds',
                                 required: false,
                                 features: 'join'
@@ -58,24 +56,26 @@ const commandArray = [
                     },
                     {
                         names: ['-ai'],
-                        description: 'Отобразить дополнительную информацию.',
-                        args: []
+                        description: 'Отобразить дополнительную информацию.'
                     },
                     {
                         names: ['--dont-ignore-case', '-dic'],
-                        description: 'Не игнорировать регистр при поиске.',
-                        args: []
+                        description: 'Не игнорировать регистр при поиске.'
                     },
                     {
                         names: ['--direct-search', '-ds'],
-                        description: 'Искать только абсолютные совпадения.',
-                        args: []
+                        description: 'Искать только абсолютные совпадения.\n' +
+                        '\tВ этом случае при поиске "yes" найдётся "yes", но не "Yes" или "ohYes".'
+                    },
+                    {
+                        names: ['--delete', '-del'],
+                        description: 'Удалить сообщение вызывавшее команду.'
                     }
                 ]
             })
         }
 
-        public async execute(args: Client_Args, pars: Client_Pars): Promise<unknown> {
+        public async execute(args: Command_Args, pars: Command_Pars): Promise<unknown> {
             this.message = args.message as Message
             this.search_query = args.search_query as string ?? ''
             this.target = emojis
@@ -117,6 +117,12 @@ const commandArray = [
                     }
                     case '--direct-search': {
                         this.matches = this.target.filter(v => v.name == this.search_query)
+                        break
+                    }
+                    case '--delete': {
+                        if (this.message.channel instanceof DMChannel) break
+                        if (!this.message.channel.permissionsFor(this.message.client.user).has('MANAGE_MESSAGES')) break
+                        await this.message.delete()
                         break
                     }
                 }
@@ -173,7 +179,7 @@ const commandArray = [
                 .setDescription(this.buffer[this.page] ?? 'пусто')
         }
 
-        private _choose(args: Client_Args, pars: Client_Pars, guild_array: Guild[]): void {
+        private _choose(args: Command_Args, pars: Command_Pars, guild_array: Guild[]): void {
             const Embed = new MessageEmbed()
                 .setTitle('Найдено несколько совпадений...')
                 .setDescription(guild_array.map((v, i) => `\`${i + 1}\` \`${v}\`\n`))
@@ -255,22 +261,24 @@ const commandArray = [
             super({
                 names: ['user'],
                 description: 'Выводит информацию о пользователе.',
-                client_perms: [],
-                member_perms: [],
+                additional: 'В случае отсутствия аргумента выводит информацию о вас.',
+                client_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
+                member_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
                 owner_only: false,
                 guild_only: true,
                 args: [
                     {
                         name: 'message',
-                        description: 'Экземпляр сообщения.',
                         type: 'Message',
                         required: false
                     },
                     {
                         name: 'user',
-                        description: 'Юзернейм, никнейм, id, либо упоминание пользователя.',
+                        description: 'Юзернейм, никнейм, id, либо упоминание пользователя.\n' +
+                        '\t(например "Jill", "608154725338185738" или "Jill#8599")',
                         type: 'GuildMembers',
-                        required: false
+                        required: false,
+                        features: 'join'
                     }
                 ],
                 pars: [
@@ -278,12 +286,17 @@ const commandArray = [
                         names: ['--help', '-h', '-?'],
                         description: 'Отобразить сведения об использовании.',
                         args: []
+                    },
+                    {
+                        names: ['--delete', '-del'],
+                        description: 'Удалить сообщение вызывавшее команду',
+                        args: []
                     }
                 ]
             })
         }
 
-        public async execute(args: Client_Args, pars: Client_Pars): Promise<unknown> {
+        public async execute(args: Command_Args, pars: Command_Pars): Promise<unknown> {
             this.message = args.message as Message
             this.members = args.user as GuildMember[]
 
@@ -291,6 +304,12 @@ const commandArray = [
                 switch (par) {
                     case '--help': {
                         return this._send_help(this.message)
+                    }
+                    case '--delete': {
+                        if (this.message.channel instanceof DMChannel) break
+                        if (!this.message.channel.permissionsFor(this.message.client.user).has('MANAGE_MESSAGES')) break
+                        await this.message.delete()
+                        break
                     }
                 }
             }
@@ -367,21 +386,18 @@ const commandArray = [
             })
         }
     },
-    class HelpCommand extends ClientCommand {
+    class CapabilitiesCommand extends ClientCommand {
         message: Message
 
         public constructor() {
             super({
-                names: ['help', '?'],
-                description: 'Выводит справочную информацию о командах.',
-                client_perms: [],
-                member_perms: [],
-                owner_only: false,
-                guild_only: false,
+                names: ['capabilities', 'cap'],
+                description: 'Вызывает это сообщение.',
+                client_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
+                member_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
                 args: [
                     {
                         name: 'message',
-                        description: 'Экземпляр сообщения.',
                         type: 'Message',
                         required: false
                     }
@@ -389,14 +405,54 @@ const commandArray = [
                 pars: [
                     {
                         names: ['--help', '-h', '-?'],
-                        description: 'Отобразить сведения об использовании.',
-                        args: []
+                        description: 'Отобразить сведения об использовании.'
                     }
                 ]
             })
         }
 
-        public async execute(args: Client_Args, pars: Client_Pars): Promise<unknown> {
+        public async execute(args: Command_Args, pars: Command_Pars): Promise<unknown> {
+            this.message = args.message as Message
+
+            for (const [par, par_args] of Object.entries(pars)) {
+                switch (par) {
+                    case '--help': {
+                        return this._send_help(this.message)
+                    }
+                }
+            }
+                
+            const Embed = new MessageEmbed()
+                .setDescription(client.commands.map(v => '```\n' + `${v.names[0]}\n${v.description}` + '```').join(''))
+            this.message.channel.send(Embed)
+        }
+    },
+    class HowToUseItCommand extends ClientCommand {
+        message: Message
+
+        public constructor() {
+            super({
+                names: ['howtouseit', 'htui'],
+                description: 'Выводит справочную информацию об использованию бота.',
+                client_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
+                member_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
+                args: [
+                    {
+                        name: 'message',
+                        type: 'Message',
+                        required: false
+                    }
+                ],
+                pars: [
+                    {
+                        names: ['--help', '-h', '-?'],
+                        description: 'Отобразить сведения об использовании.'
+                    }
+                ]
+            })
+        }
+
+        public async execute(args: Command_Args, pars: Command_Pars): Promise<unknown> {
             this.message = args.message as Message
 
             for (const [par, par_args] of Object.entries(pars)) {
@@ -407,11 +463,22 @@ const commandArray = [
                 }
             }
 
-            let text = 'Для получения подробных следований наберите <команда> --help\n\n' +
-            client.commands.map(v => v.names[0] + '\n' + v.description).join('\n\n')
-
+            const info = [
+                '```',
+                'Что бы использовать команды бота перед их именем следует писать префикс бота:',
+                `${client.prefix}команда\n`,
+                'Так же командам зачастую требуются аргументы, аргументами является любые символы идущие после имени команды, например:',
+                `${client.prefix}команда аргумент\n`,
+                'Посмотреть требуемые аргументы, как и другую информацию о требуемой команде можно с помощью параметра --help:',
+                `${client.prefix}команда --help\n`,
+                'Теперь поговорим о параметрах, параметрами являются любые символы, начинающиеся с одного, или двух знаков минуса (-).',
+                'Обычно параметры пишутся после аргументов, если таковые имеются, но некоторые параметры можно использовать и игнорируя все аргументы, к примеру --help.',
+                `Теперь когда вы разобрались в том, как пользоваться данным ботом - используйте команду ${client.prefix}capabilities для получения списка команд.`,
+                '```'
+            ]
+                
             const Embed = new MessageEmbed()
-                .setDescription('```\n' + text + '```')
+                .setDescription(info.join('\n'))
             this.message.channel.send(Embed)
         }
     }

@@ -45,5 +45,7 @@ const client = new Client()
 client.load_commands()
 client.load_events()
 client.login(CLIENT_TOKEN)
-
-client.on('ready', () => console.log(true))
+client.on('ready', () => {
+    client.user.setActivity(`${client.prefix}howtouseit`, {type: 'WATCHING'})
+    console.log(true)
+})

@@ -1,5 +1,5 @@
 import { DMChannel, Message } from 'discord.js'
-import { Argument, MessageEmbed } from '../utils/classes'
+import { MessageEmbed, Client_Argument } from '../utils/classes'
 import { member_mention, member_username_hash } from '../utils/regex'
 import { tr } from '../utils/translate'
 import { client } from '../bot'
@@ -120,7 +120,7 @@ async function message_handler(message: Message): Promise<unknown> {
     }
 
     //constructor
-    async function transfer_handler(message: Message, client_arg: Argument, value: string, index: number): Promise<unknown> {
+    async function transfer_handler(message: Message, client_arg: Client_Argument, value: string, index: number): Promise<unknown> {
         if (client_arg.required && !value) {
             const Embed = new MessageEmbed()
                 .setDescription(`🚫 Вы пропустили обязательный аргумент \`${client_arg.name}\``)
@@ -154,34 +154,32 @@ async function message_handler(message: Message): Promise<unknown> {
                 if (!value) return [undefined]
 
                 const matches = []
-                const members = await message.guild.members.fetch()
-
-                //id
-                if (value.isNumber && members.get(value)) matches.push(members.get(value))
+                const members = (await message.guild.members.fetch()).array()
 
                 //mention
                 const mention = value.match(member_mention)
-                if (mention) matches.push(members.get(mention[1]))
+                if (mention) {
+                    matches.push(...members.filter(v => 
+                        v.id == mention[1]
+                    ))
+                }
 
-                //usernameHashTag
+                //username_hash_tag
                 const username_hash = value.match(member_username_hash)
                 if (username_hash) {
-                    members.filter(v => 
+                    matches.push(...members.filter(v => 
                         v.user.username.toLocaleLowerCase() == username_hash[1].toLocaleLowerCase()
                         &&
                         v.user.discriminator == username_hash[2]
-                    ).forEach(v => matches.push(v))
+                    ))
                 }
 
-                //nickname
-                members.filter(v => 
-                    v.nickname?.toLocaleLowerCase() == value.toLocaleLowerCase()
-                ).forEach(v => matches.push(v))
-
-                //username
-                members.filter(v => 
-                    v.user.username.toLocaleLowerCase() == value.toLocaleLowerCase()
-                ).forEach(v => matches.push(v))
+                //other
+                matches.push(...members.filter(v => 
+                    v.nickname?.toLocaleLowerCase() == value.toLocaleLowerCase() ||
+                    v.user.username.toLocaleLowerCase() == value.toLocaleLowerCase() ||
+                    v.id == value
+                ))
 
                 return matches
             }

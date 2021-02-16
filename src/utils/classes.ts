@@ -1,5 +1,6 @@
-export { ClientCommand, CommandOptions, MessageEmbed, Argument, Client_Args, Client_Pars, Constructors }
+export { ClientCommand, CommandOptions, MessageEmbed, Command_Args, Command_Pars, Constructors, Client_Argument }
 import { PermissionString, MessageEmbed as OldMessageEmbed, Message } from 'discord.js'
+import { tr } from './translate'
 
 type Constructors =
 | 'Message'
@@ -11,7 +12,30 @@ type Features =
 | 'join'
 | 'array'
 
-interface Argument {
+
+interface Command_Argument {
+    name: string
+    description?: string
+    required: boolean
+    type?: Constructors
+    features?: Features
+}
+
+interface Command_Parameter {
+    names: string[]
+    description?: string
+    args?: Command_Argument[]
+}
+
+interface Command_Args {
+    [arg_name: string]: unknown
+}
+
+interface Command_Pars {
+    [par_name: string]: Command_Args
+}
+
+interface Client_Argument {
     name: string
     description: string
     required: boolean
@@ -19,37 +43,31 @@ interface Argument {
     features?: Features
 }
 
-interface Parameter {
+interface Client_Parameter {
     names: string[]
     description: string
-    args: Argument[]
-}
-
-interface Client_Args {
-    [arg_name: string]: unknown
-}
-
-interface Client_Pars {
-    [par_name: string]: Client_Args
+    args: Client_Argument[]
 }
 
 interface CommandOptions {
     names: string[]
-    description: string
+    description?: string
+    additional?: string
     
     client_perms: PermissionString[]
     member_perms: PermissionString[]
 
-    owner_only: boolean
-    guild_only: boolean
+    owner_only?: boolean
+    guild_only?: boolean
 
-    args: Argument[]
-    pars: Parameter[]
+    args?: Command_Argument[]
+    pars?: Command_Parameter[]
 }
 
 abstract class ClientCommand {
     readonly names: string[]
     readonly description: string
+    readonly additional: string
 
     readonly client_perms: PermissionString[]
     readonly member_perms: PermissionString[]
@@ -57,24 +75,33 @@ abstract class ClientCommand {
     readonly owner_only: boolean
     readonly guild_only: boolean
 
-    readonly args: Argument[]
-    readonly pars: Parameter[]
+    readonly args: Client_Argument[]
+    readonly pars: Client_Parameter[]
     
     constructor(options: CommandOptions) {
         this.names = options.names
-        this.description = options.description
+        this.description = options.description ?? 'отсутствует'
+        this.additional = options.additional
 
         this.client_perms = options.client_perms
         this.member_perms = options.member_perms
 
-        this.owner_only = options.owner_only
-        this.guild_only = options.guild_only
+        this.owner_only = options.owner_only ?? false
+        this.guild_only = options.guild_only ?? false
+        
+        this.args = options.args.map(v => {
+            if (!v.description) v.description = 'отсутствует'
+            return v
+        }) as Client_Argument[] ?? []
 
-        this.args = options.args
-        this.pars = options.pars
+        this.pars = options.pars.map(v => {
+            if (!v.description) v.description = 'отсутствует'
+            if (!v.args) v.args = []
+            return v
+        }) as Client_Parameter[] ?? []
     }
 
-    abstract execute(args: Client_Args, pars: Client_Pars): Promise<unknown>
+    abstract execute(args: Command_Args, pars: Command_Pars): Promise<unknown>
     protected _send_help(message: Message): void {
         const args = []
         const pars = []
@@ -87,7 +114,7 @@ abstract class ClientCommand {
             if (arg.features == 'join') first_line += '*'
             if (!arg.required) first_line += '?'
 
-            args.push(`  ${first_line}\n    ${arg.description}\n`)
+            args.push(`  <${first_line}>\n\t${arg.description}\n`)
         }
         for (const par of this.pars) {
             let first_line = par.names.join(', ')
@@ -101,17 +128,19 @@ abstract class ClientCommand {
                 return `<${first_line_arg}>`
             }).join(', ')
 
-            pars.push(`  ${first_line}\n    ${par.description}\n`)
+            pars.push(`  ${first_line}\n\t${par.description}\n`)
         }
 
         const desc = []
             .add('```autohotkey')
-            .add('Описание:')
-            .add(`  ${this.description}\n`)
-            .add('Аргументы:')
-            .add(args.join('\n'), !args.empty, '  отсутствуют\n')
-            .add('Параметры:')
-            .add(pars.join('\n'), !pars.empty, '  отсутствуют\n')
+            .add(`Имена команды: ${this.names.join(', ')}.`, this.names.length > 1, `Имя команды: ${this.names[0]}.`)
+            .add(`Описание: ${this.description}`)
+            .add(`Дополнительно: ${this.additional}\n`, this.additional)
+            .add(`Аргументы:\n${args.join('\n')}`, !args.empty, 'Аргументы:\n  отсутствуют\n')
+            .add(`Параметры:\n${pars.join('\n')}`, !pars.empty, 'Параметры:\n  отсутствуют\n')
+            .add('Требуемые права:', !this.client_perms.empty || this.member_perms.empty)
+            .add(`  Бота:\n${this.client_perms.map(v => `\t${tr(v)}`).join(',\n')}\n`, !this.client_perms.empty)
+            .add(`  Пользователя:\n${this.member_perms.map(v => `\t${tr(v)}`).join(',\n')}\n`, !this.member_perms.empty)
             .add('```')
 
         const Embed = new MessageEmbed()

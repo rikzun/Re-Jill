@@ -1,5 +1,5 @@
 import { client } from '../bot'
-import { Message, TextChannel, MessageOptions } from 'discord.js'
+import { Message, TextChannel, APIMessage } from 'discord.js'
 import { MessageEmbed } from '../utils/classes'
 
 client.on('message', async (message: Message) => {
@@ -12,36 +12,33 @@ client.on('message', async (message: Message) => {
     //escape char trigger
     if (char) return
 
-    let channel: TextChannel
-    let link_message: Message
-
     try {
-        channel = client.guilds.cache.get(guildID).channels.cache.get(channelID) as TextChannel
-        link_message = await channel.messages.fetch(messageID)
-    } catch (error) { return }
+        const channel = client.guilds.cache.get(guildID).channels.cache.get(channelID) as TextChannel
+        const link_message = await channel.messages.fetch(messageID)
 
-    const message_options: MessageOptions = {
-        content: link_message.cleanContent,
-        embed: link_message.embeds[0],
-        files: link_message.attachments.array(),
-        disableMentions: 'all'
-    }
+        const apimessage = new APIMessage(message.channel as TextChannel, {
+            content: link_message.cleanContent,
+            disableMentions: 'all'
+        })
+        const embeds = [
+            ...link_message.embeds.filter(v => v.type == 'rich'),
+            ...link_message.attachments.values()
+        ]
 
-    if (!message_options.content && !message_options.embed && !message_options.files.empty) {
-        const Embed = new MessageEmbed()
-            .setDescription('🚫 Сообщение пустое.')
-        return message.channel.send(Embed)
-    }
+        if (!link_message.cleanContent && !embeds.empty) {
+            const Embed = new MessageEmbed()
+                .setDescription('🚫 Сообщение пустое.')
+            return message.channel.send(Embed)
+        }
 
-    const infoEmbed = new MessageEmbed()
-        .setAuthor(
-            link_message.author.username,
-            link_message.author.displayAvatarURL({format: 'png', dynamic: true, size: 4096}))
-        .setTimestamp(link_message.createdTimestamp)
-        .setDescription(`[ссылка](https://discord.com/channels/${guildID}/${channelID}/${messageID})`)
+        const infoEmbed = new MessageEmbed()
+            .setAuthor(
+                link_message.author.username,
+                link_message.author.displayAvatarURL({format: 'png', dynamic: true, size: 4096}))
+            .setTimestamp(link_message.createdTimestamp)
+            .setDescription(`[ссылка](https://discord.com/channels/${guildID}/${channelID}/${messageID})`)
 
-    try {
-        await message.channel.send(message_options)
+        await message.channel.send(apimessage, embeds)
         await message.channel.send(infoEmbed)
     } catch (error) {}
 })

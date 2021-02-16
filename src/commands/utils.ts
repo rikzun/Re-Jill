@@ -1,5 +1,5 @@
 import { Collection, Message, DMChannel } from 'discord.js'
-import { ClientCommand, MessageEmbed, Client_Args, Client_Pars } from '../utils/classes'
+import { ClientCommand, MessageEmbed, Command_Args, Command_Pars } from '../utils/classes'
 import { emoji_regex, unicode_emoji_regex } from '../utils/regex'
 import { emojis } from '../events/emoji_data'
 
@@ -10,25 +10,26 @@ const command_array = [
         matches: unknown[][]
         separator: string
         choise: number
+        ignore_case: boolean
 
         public constructor() {
             super({
                 names: ['emoji', 'em'],
-                description: 'Выводит эмодзи.',
-                client_perms: [],
-                member_perms: [],
-                owner_only: false,
-                guild_only: false,
+                description: 'Выводит указанный эмодзи.',
+                additional: 'Без использования дополнительных параметров осуществляется точный поиск с игнорированием регистра.\n' +
+                '(например при поиске "yes" найдётся "Yes", но не "ohYes")',
+                client_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
+                member_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
                 args: [
                     {
                         name: 'message',
-                        description: 'Экземпляр сообщения.',
                         type: 'Message',
                         required: false
                     },
                     {
                         name: 'emoji_array',
-                        description: 'Строка состоящая из названий эмодзи.',
+                        description: 'Эмодзи, точные имена эмодзи, либо их ID. Так же поддерживаются стандартные эмодзи.\n' +
+                        '\t(например "trololo", "801454131101302814" или "👍🏿")',
                         required: true,
                         features: 'array'
                     }
@@ -36,13 +37,11 @@ const command_array = [
                 pars: [
                     {
                         names: ['--help', '-h', '-?'],
-                        description: 'Отобразить сведения об использовании.',
-                        args: []
+                        description: 'Отобразить сведения об использовании.'
                     },
                     {
                         names: ['-s'],
-                        description: 'Использовать пробелы как разделитель эмодзи.',
-                        args: []
+                        description: 'Использовать пробелы как разделитель эмодзи.'
                     },
                     {
                         names: ['--choise', '-ch'],
@@ -50,18 +49,26 @@ const command_array = [
                         args: [
                             {
                                 name: 'choise',
-                                description: 'Номер выбранного варианта.',
                                 type: 'Number',
                                 required: true
                             }
                         ]
+                    },
+                    {
+                        names: ['--dont-ignore-case', '-dic'],
+                        description: 'Не игнорировать регистр при поиске.'
+                    },
+                    {
+                        names: ['--delete', '-del'],
+                        description: 'Удалить сообщение вызывавшее команду'
                     }
                 ]
             })
         }
 
-        public async execute(args: Client_Args, pars: Client_Pars): Promise<unknown> {
+        public async execute(args: Command_Args, pars: Command_Pars): Promise<unknown> {
             this.message = args.message as Message
+            this.ignore_case = true
             this.separator = ''
             delete this.choise
 
@@ -79,6 +86,16 @@ const command_array = [
                         if (Number.isNaN(num)) break
 
                         this.choise = num - 1
+                        break
+                    }
+                    case '--dont-ignore-case': {
+                        this.ignore_case = false
+                        break
+                    }
+                    case '--delete': {
+                        if (this.message.channel instanceof DMChannel) break
+                        if (!this.message.channel.permissionsFor(this.message.client.user).has('MANAGE_MESSAGES')) break
+                        await this.message.delete()
                         break
                     }
                 }
@@ -130,28 +147,39 @@ const command_array = [
         private _find_emojis(): unknown[][] {
             const rt = []
 
-            for (const char of this.emoji_array.map(v => v.toLocaleLowerCase())) {
+            for (const char of this.emoji_array) {
                 if (!char) continue
 
-                const emoji_string_regex = char.match(emoji_regex)
                 const unicode_emoji = char.match(unicode_emoji_regex)
+                const emoji_string_regex = char.match(emoji_regex)
                 const matches = []
 
-                if (emoji_string_regex) {
+                if (unicode_emoji || char == '\n') matches.push(char)
+                if (this.ignore_case) {
+                    if (emoji_string_regex) {
+                        matches.push(...emojis.filter(v => 
+                            v.name.toLocaleLowerCase() == emoji_string_regex[1].toLocaleLowerCase() || v.id == emoji_string_regex[2]
+                        ))
+                    }
+
                     matches.push(...emojis.filter(v => 
-                        v.name.toLocaleLowerCase() == emoji_string_regex[1] || v.id == emoji_string_regex[2]
+                        v.name.toLocaleLowerCase() == char.toLocaleLowerCase() ||
+                        v.id == char
+                    ))
+                } else {
+                    if (emoji_string_regex) {
+                        matches.push(...emojis.filter(v => 
+                            v.name == emoji_string_regex[1] || v.id == emoji_string_regex[2]
+                        ))
+                    }
+
+                    matches.push(...emojis.filter(v => 
+                        v.name == char ||
+                        v.id == char
                     ))
                 }
-                if (char.isNumber) matches.push(...emojis.filter(v => v.id == char))
 
-                if (unicode_emoji || char == '\n') {
-                    matches.push(char)
-                } else {
-                    matches.push(...emojis.filter(v => v.name.toLocaleLowerCase() == char))
-                }
-
-                if (matches.empty) matches.push('❌')
-                rt.push(matches)
+                rt.push(!matches.empty ? matches : ['❌'])
             }
 
             return rt
