@@ -104,12 +104,9 @@ async function message_handler(message: Message): Promise<unknown> {
 
         for (let ii = 0; ii < client_cmd_par.args.length; ii++) {
             const client_cmd_par_arg = client_cmd_par.args[ii]
-            const value = message_args[par_index + ii + 1]
+            let value = message_args[par_index + ii + 1]
 
-            if (pars_names.includes(value)) {
-                transfer_pars[client_cmd_par.names[0]][client_cmd_par_arg.name] = undefined
-                continue
-            }
+            if (pars_names.includes(value)) value = undefined
             
             try {
                 transfer_pars[client_cmd_par.names[0]][client_cmd_par_arg.name] = await transfer_handler(message, client_cmd_par_arg, value, par_index + ii + 1)
@@ -130,10 +127,11 @@ async function message_handler(message: Message): Promise<unknown> {
         }
 
         if (client_arg.features) {
-            let end_index = Math.min(...pars_indices.filter(v => index < v))
+            let end_index = Math.min(...pars_indices.filter(v => index <= v))
             if (!isFinite(end_index)) end_index = message_args.length
 
             const message_slice = message_args.slice(index, end_index)
+
             switch (client_arg.features) {
                 case 'join': {
                     value = message_slice.join(' ')
@@ -190,6 +188,6 @@ async function message_handler(message: Message): Promise<unknown> {
             }
         }
     }
-
+    
     await client_cmd.execute(transfer_args, transfer_pars)
 }

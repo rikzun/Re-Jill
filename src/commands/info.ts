@@ -102,6 +102,8 @@ const commandArray = [
                             return this.message.channel.send(Embed)
                         }
 
+                        if (this.message.channel instanceof DMChannel && guild_array[0] == undefined) return
+
                         if (guild_array.length == 1) {
                             if (guild_array[0] == undefined) guild_array[0] = this.message.guild
                             this.target = guild_array[0].emojis.cache.array()
