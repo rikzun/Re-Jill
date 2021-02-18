@@ -1,4 +1,7 @@
-export { ClientCommand, CommandOptions, MessageEmbed, Command_Args, Command_Pars, Constructors, Client_Argument }
+export { 
+    ClientCommand, CommandOptions, MessageEmbed, Command_Args, 
+    Command_Pars, Constructors, Client_Argument, ClientEvent, 
+}
 import { PermissionString, MessageEmbed as OldMessageEmbed, Message } from 'discord.js'
 import { tr } from './translate'
 
@@ -11,7 +14,6 @@ type Constructors =
 type Features =
 | 'join'
 | 'array'
-
 
 interface Command_Argument {
     name: string
@@ -89,12 +91,12 @@ abstract class ClientCommand {
         this.owner_only = options.owner_only ?? false
         this.guild_only = options.guild_only ?? false
         
-        this.args = options.args.map(v => {
+        this.args = options.args?.map(v => {
             if (!v.description) v.description = 'отсутствует'
             return v
         }) as Client_Argument[] ?? []
 
-        this.pars = options.pars.map(v => {
+        this.pars = options.pars?.map(v => {
             if (!v.description) v.description = 'отсутствует'
             if (!v.args) v.args = []
             return v
@@ -102,7 +104,7 @@ abstract class ClientCommand {
     }
 
     abstract execute(args: Command_Args, pars: Command_Pars): Promise<unknown>
-    protected _send_help(message: Message): void {
+    send_help(message: Message): void {
         const args = []
         const pars = []
 
@@ -130,10 +132,9 @@ abstract class ClientCommand {
 
             pars.push(`  ${first_line}\n\t${par.description}\n`)
         }
-
         const desc = []
             .add('```autohotkey')
-            .add(`Имена команды: ${this.names.join(', ')}.`, this.names.length > 1, `Имя команды: ${this.names[0]}.`)
+            .add((this.names.length > 1 ? 'Имена' : 'Имя') + ` команды: ${this.names.join(', ')}.`)
             .add(`Описание: ${this.description}`)
             .add(`Дополнительно: ${this.additional}\n`, this.additional)
             .add(`Аргументы:\n${args.join('\n')}`, !args.empty, 'Аргументы:\n  отсутствуют\n')
@@ -153,5 +154,36 @@ class MessageEmbed extends OldMessageEmbed {
     constructor() {
         super()
         this.color = 3092790
+    }
+}
+
+interface EventOptions {
+    name: string
+    description: string
+    additional?: string
+}
+
+abstract class ClientEvent {
+    readonly name: string
+    readonly description: string
+    readonly additional: string
+
+    constructor(options: EventOptions) {
+        this.name = options.name
+        this.description = options.description
+        this.additional = options.additional
+    }
+
+    send_help(message: Message): void {
+        const desc = []
+            .add('```autohotkey')
+            .add(`Имя ивента: ${this.name}`)
+            .add(`Описание: ${this.description}`)
+            .add(`Дополнительно: ${this.additional}\n`, Boolean(this.additional))
+            .add('```')
+
+        const Embed = new MessageEmbed()
+            .setDescription(desc.join('\n'))
+        message.channel.send(Embed)
     }
 }

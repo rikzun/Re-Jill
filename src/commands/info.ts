@@ -87,7 +87,7 @@ const commandArray = [
             for (const [par, par_args] of Object.entries(pars)) {
                 switch (par) {
                     case '--help': {
-                        return this._send_help(this.message)
+                        return this.send_help(this.message)
                     }
                     case '-ai': {
                         this.addinf = true
@@ -303,7 +303,7 @@ const commandArray = [
             for (const [par, par_args] of Object.entries(pars)) {
                 switch (par) {
                     case '--help': {
-                        return this._send_help(this.message)
+                        return this.send_help(this.message)
                     }
                     case '--delete': {
                         if (this.message.channel instanceof DMChannel) break
@@ -386,13 +386,15 @@ const commandArray = [
             })
         }
     },
-    class CapabilitiesCommand extends ClientCommand {
+    class ManualCommand extends ClientCommand {
         message: Message
+        name: string
 
         public constructor() {
             super({
-                names: ['capabilities', 'cap'],
-                description: 'Вызывает это сообщение.',
+                names: ['manual'],
+                description: 'Вызывает сообщение содержащее все команды.',
+                additional: 'В случае передачи аргумента выводит его справочную информацию.',
                 client_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
                 member_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
                 args: [
@@ -400,6 +402,12 @@ const commandArray = [
                         name: 'message',
                         type: 'Message',
                         required: false
+                    },
+                    {
+                        name: 'name',
+                        description: 'Название команды, или ивента',
+                        required: false,
+                        features: 'join'
                     }
                 ],
                 pars: [
@@ -413,26 +421,44 @@ const commandArray = [
 
         public async execute(args: Command_Args, pars: Command_Pars): Promise<unknown> {
             this.message = args.message as Message
+            this.name = args.name as string
 
             for (const [par, par_args] of Object.entries(pars)) {
                 switch (par) {
                     case '--help': {
-                        return this._send_help(this.message)
+                        return this.send_help(this.message)
                     }
                 }
             }
-                
+
+            if (this.name) {
+                const target = []
+                target.push(...client.commands.filter(v => v.names.includes(this.name)))
+                target.push(...client.events.filter(v => v.name == this.name))
+
+                if (target.empty) {
+                    const Embed = new MessageEmbed().setDescription('🚫 Нет совпадений.')
+                    return this.message.channel.send(Embed)
+                }
+
+                return target[0].send_help(this.message)
+            }
+
+            const array = []
+                .add(client.commands.map(v => '```\n' + `${v.names[0]}\n${v.description}` + '```').join(''))
+                .add(client.events.map(v => '```\n' + `${v.name}\n${v.description}` + '```').join(''))
+
             const Embed = new MessageEmbed()
-                .setDescription(client.commands.map(v => '```\n' + `${v.names[0]}\n${v.description}` + '```').join(''))
+                .setDescription(array.join(''))
             this.message.channel.send(Embed)
         }
     },
-    class HowToUseItCommand extends ClientCommand {
+    class HelpCommand extends ClientCommand {
         message: Message
 
         public constructor() {
             super({
-                names: ['howtouseit', 'htui'],
+                names: ['help'],
                 description: 'Выводит справочную информацию об использованию бота.',
                 client_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
                 member_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
@@ -458,7 +484,7 @@ const commandArray = [
             for (const [par, par_args] of Object.entries(pars)) {
                 switch (par) {
                     case '--help': {
-                        return this._send_help(this.message)
+                        return this.send_help(this.message)
                     }
                 }
             }
@@ -473,7 +499,7 @@ const commandArray = [
                 `${client.prefix}команда --help\n`,
                 'Теперь поговорим о параметрах, параметрами являются любые символы, начинающиеся с одного, или двух знаков минуса (-).',
                 'Обычно параметры пишутся после аргументов, если таковые имеются, но некоторые параметры можно использовать и игнорируя все аргументы, к примеру --help.',
-                `Теперь когда вы разобрались в том, как пользоваться данным ботом - используйте команду ${client.prefix}capabilities для получения списка команд.`,
+                `Теперь когда вы разобрались в том, как пользоваться данным ботом - используйте команду ${client.prefix}manual для получения списка команд.`,
                 '```'
             ]
                 

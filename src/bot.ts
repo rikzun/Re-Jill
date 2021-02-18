@@ -1,6 +1,6 @@
 export { client }
 import { Client as OldClient, ClientOptions } from 'discord.js'
-import { ClientCommand } from './utils/classes'
+import { ClientCommand, ClientEvent } from './utils/classes'
 import { CLIENT_TOKEN, CLIENT_PREFIX, CLIENT_OWNER } from './config'
 import * as path from 'path'
 import * as fs from 'fs' 
@@ -10,6 +10,7 @@ class Client extends OldClient {
     readonly owner: string
     readonly prefix: string
     readonly commands: ClientCommand[]
+    readonly events: ClientEvent[]
 
     constructor(options?: ClientOptions) {
         super(options)
@@ -17,9 +18,10 @@ class Client extends OldClient {
         this.owner = CLIENT_OWNER
         this.prefix = CLIENT_PREFIX
         this.commands = []
+        this.events = []
     }
 
-    public load_commands(): void {
+    private _load_commands(): void {
         const command_files = fs.readdirSync(path.join(__dirname, 'commands'))
             .map(file => path.join(__dirname, 'commands', file))
 
@@ -31,21 +33,28 @@ class Client extends OldClient {
         }
     }
 
-    public load_events(): void {
+    private _load_events(): void {
         const event_files = fs.readdirSync(path.join(__dirname, 'events'))
             .map(file => path.join(__dirname, 'events', file))
 
         for (const file of event_files) {
-            require(file)
+            const event_file = require(file)
+            if (!event_file.hasOwnProperty('default')) continue
+
+            client.events.push(new event_file.default())
         }
     }
-}
 
+    public init() {
+        this._load_commands()
+        this._load_events()
+        this.login(CLIENT_TOKEN)
+    }
+}
 const client = new Client()
-client.load_commands()
-client.load_events()
-client.login(CLIENT_TOKEN)
+client.init()
+
 client.on('ready', () => {
-    client.user.setActivity(`${client.prefix}howtouseit`, {type: 'WATCHING'})
+    client.user.setActivity(`${client.prefix}help`, {type: 'WATCHING'})
     console.log(true)
 })

@@ -16,16 +16,22 @@ client.on('message', async (message: Message) => {
         const channel = client.guilds.cache.get(guildID).channels.cache.get(channelID) as TextChannel
         const link_message = await channel.messages.fetch(messageID)
 
-        const apimessage = new APIMessage(message.channel as TextChannel, {
-            content: link_message.cleanContent,
-            disableMentions: 'all'
-        })
+        let rtmsg
+        if (link_message.cleanContent) {
+            rtmsg = new APIMessage(message.channel as TextChannel, {
+                content: link_message.cleanContent,
+                disableMentions: 'all'
+            })
+        } else {
+            rtmsg = ''
+        }
+
         const embeds = [
             ...link_message.embeds.filter(v => v.type == 'rich'),
             ...link_message.attachments.values()
         ]
 
-        if (!link_message.cleanContent && !embeds.empty) {
+        if (!link_message.cleanContent && embeds.empty) {
             const Embed = new MessageEmbed()
                 .setDescription('🚫 Сообщение пустое.')
             return message.channel.send(Embed)
@@ -38,7 +44,9 @@ client.on('message', async (message: Message) => {
             .setTimestamp(link_message.createdTimestamp)
             .setDescription(`[ссылка](https://discord.com/channels/${guildID}/${channelID}/${messageID})`)
 
-        await message.channel.send(apimessage, embeds)
+        await message.channel.send(rtmsg, embeds)
         await message.channel.send(infoEmbed)
-    } catch (error) {}
+    } catch (error) {
+        console.log(error)
+    }
 })

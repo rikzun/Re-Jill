@@ -1,8 +1,8 @@
 import { Guild, GuildEmoji } from 'discord.js'
 import { client } from '../bot'
+import { ClientEvent } from '../utils/classes'
 
 export let emojis: GuildEmoji[] = []
-
 async function emoij_callback(event_type: string, first_emoji?: GuildEmoji, second_emoji?: GuildEmoji, guild?: Guild): Promise<void> {
     switch (event_type) {
         case 'ready': {

@@ -75,7 +75,7 @@ const command_array = [
             for (const [par, par_args] of Object.entries(pars)) {
                 switch (par) {
                     case '--help': {
-                        return this._send_help(this.message)
+                        return this.send_help(this.message)
                     }
                     case '-s': {
                         this.separator = ' '

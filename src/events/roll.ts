@@ -1,10 +1,35 @@
 import { client } from '../bot'
 import { Message } from 'discord.js'
 import { randint } from '../utils/functions'
-import { MessageEmbed } from '../utils/classes'
+import { MessageEmbed, ClientEvent } from '../utils/classes'
 
 const regexpRoll = /^(?:(\d*)?d(\d*))(?: ?\((\d*)\))?((?: ?=?[+\-*\/] ?(?:(?:\d*)?d?(?:\d*.?\d+)))*)(?: ?_(>|>=|=|<=|<)(\d*\.?\d+))?(?: ([\s\S]*))?$/
 const regexpMod = /(=?[+\-*\/])(?:(?:(\d*)d)?(\d*\.?\d+)?)/g
+
+export default class RollEvent extends ClientEvent {
+    constructor() {
+        super({
+            name: 'roll',
+            description: 'Кидает кубик с требуемыми параметрами.',
+            additional: '\n' +
+            'MdN (R) =SN _HN ?\n' +
+            '│ │  │  │││  ││ │\n' +
+            '│ │  │  │││  ││ └ Любой текст\n' +
+            '│ │  │  │││  ││\n' +
+            '│ │  │  │││  │└ Целое, либо дробное число\n' +
+            '│ │  │  │││  └ Сравнительное выражение (>, >=, =, <=, <)\n' +
+            '│ │  │  │││\n' +
+            '│ │  │  ││└ Целое, либо дробное число или дайс\n' +
+            '│ │  │  │└ Один из модификаторов (+, -, *, /)\n' +
+            '│ │  │  └ При указании знака операция происходит с суммой\n' +
+            '│ │  │\n' +
+            '│ │  └ Количество повторений броска\n' +
+            '│ │\n' +
+            '│ └ Количество граней на кубике\n' +
+            '└ Количество кубиков, необязательный параметр'
+        })    
+    }
+}
 
 class Roll {
     dNumber: number
