@@ -12,16 +12,17 @@ declare global {
         numsafterdot(): number
     }
     interface Array<T> {
-        add(elem1: unknown, bool?: unknown, elem2?:unknown): this
         randomKey(): number
         randomValue(): unknown
         empty: boolean
+        add(elem1: unknown, bool?: unknown, elem2?: unknown): this
+        delValue(...items: unknown[]): void
     }
     interface Object {
-        randomKey(): string
+        randomKey(): unknown
         randomValue(): unknown
         empty: boolean,
-        getKeyByValue(value: unknown): string
+        getKeyByValue(value: unknown): unknown | null
     }
 }
 
@@ -79,15 +80,6 @@ Object.defineProperty(Number.prototype, 'numsafterdot', {
     }
 })
 
-Object.defineProperty(Array.prototype, 'add', {
-    value: function(elem1: unknown, bool: unknown = true, elem2: unknown) {
-        if (bool) {
-            this.push(elem1)
-        } else if(elem2) this.push(elem2)
-        return this
-    }
-})
-
 Object.defineProperty(Array.prototype, 'randomKey', {
     value: function(): number {
         return randint(0, this.length - 1)
@@ -105,6 +97,27 @@ Object.defineProperty(Array.prototype, 'empty', {
         return this.length == 0
     }
 })
+
+Object.defineProperty(Array.prototype, 'add', {
+    value: function(elem1: unknown, bool: unknown = true, elem2: unknown) {
+        if (bool) {
+            this.push(elem1)
+        } else if(elem2) this.push(elem2)
+        return this
+    }
+})
+
+Object.defineProperty(Array.prototype, 'delValue', {
+    value: function(...items: unknown[]): void {
+        for (const item of items) {
+            const index = this.findIndex(v => v === item)
+            if (index < 0) continue
+
+            this.splice(index, 1)
+        }
+    }
+})
+
 
 Object.defineProperty(Object.prototype, 'randomKey', {
     value: function(): string {
@@ -127,7 +140,7 @@ Object.defineProperty(Object.prototype, 'empty', {
 })
 
 Object.defineProperty(Object.prototype, 'getKeyByValue', {
-    value: function(value: unknown): string {
-        return Object.keys(this).find(key => this[key] === value) ?? ''
+    value: function(value: unknown): unknown | null {
+        return Object.keys(this).find(key => this[key] === value) ?? null
     }
 })

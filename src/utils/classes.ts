@@ -1,9 +1,9 @@
-export { 
-    ClientCommand, CommandOptions, MessageEmbed, Command_Args, 
-    Command_Pars, Constructors, Client_Argument, ClientEvent, 
-}
 import { PermissionString, MessageEmbed as OldMessageEmbed, Message } from 'discord.js'
 import { tr } from './translate'
+export { 
+    ClientCommand, CommandOptions, MessageEmbed, Command_Args, 
+    Command_Pars, Constructors, Client_Argument, ClientEvent
+}
 
 type Constructors =
 | 'Message'

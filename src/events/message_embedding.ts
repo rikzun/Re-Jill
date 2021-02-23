@@ -16,14 +16,13 @@ client.on('message', async (message: Message) => {
         const channel = client.guilds.cache.get(guildID).channels.cache.get(channelID) as TextChannel
         const link_message = await channel.messages.fetch(messageID)
 
-        let rtmsg
+        let rtmsg: string | APIMessage = ''
         if (link_message.cleanContent) {
             rtmsg = new APIMessage(message.channel as TextChannel, {
                 content: link_message.cleanContent,
-                disableMentions: 'all'
+                disableMentions: 'all',
+                files: link_message.attachments.array()
             })
-        } else {
-            rtmsg = ''
         }
 
         const embeds = [
