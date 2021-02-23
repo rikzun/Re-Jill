@@ -91,16 +91,38 @@ abstract class ClientCommand {
         this.owner_only = options.owner_only ?? false
         this.guild_only = options.guild_only ?? false
         
-        this.args = options.args?.map(v => {
-            if (!v.description) v.description = 'отсутствует'
-            return v
-        }) as Client_Argument[] ?? []
+        this.args = [
+            {
+                name: 'message',
+                description: '',
+                type: 'Message',
+                required: false
+            }
+        ]
 
-        this.pars = options.pars?.map(v => {
-            if (!v.description) v.description = 'отсутствует'
-            if (!v.args) v.args = []
-            return v
-        }) as Client_Parameter[] ?? []
+        this.pars = [
+            {
+                names: ['--help', '-h', '-?'],
+                description: 'Отобразить сведения об использовании.',
+                args: []
+            },
+            {
+                names: ['--delete', '-del'],
+                description: 'Удалить сообщение вызывавшее команду',
+                args: []
+            }
+        ]
+
+        for (const arg of options.args ?? []) {
+            if (!arg.description) arg.description = 'отсутствует'
+            this.args.push(arg as Client_Argument)
+        }
+
+        for (const par of options.pars ?? []) {
+            if (!par.description) par.description = 'отсутствует'
+            if (!par.args) par.args = []
+            this.pars.push(par as Client_Parameter)
+        }
     }
 
     abstract execute(args: Command_Args, pars: Command_Pars): Promise<unknown>

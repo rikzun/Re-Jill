@@ -26,11 +26,6 @@ const commandArray = [
                 member_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
                 args: [
                     {
-                        name: 'message',
-                        type: 'Message',
-                        required: false
-                    },
-                    {
                         name: 'search_query',
                         description: 'Название эмодзи.',
                         required: false,
@@ -38,10 +33,6 @@ const commandArray = [
                     }
                 ],
                 pars: [
-                    {
-                        names: ['--help', '-h', '-?'],
-                        description: 'Отобразить сведения об использовании.'
-                    },
                     {
                         names: ['--guild', '-g'],
                         description: 'Искать эмодзи только на определённом сервере.',
@@ -66,10 +57,6 @@ const commandArray = [
                         names: ['--direct-search', '-ds'],
                         description: 'Искать только абсолютные совпадения.\n' +
                         '\tВ этом случае при поиске "yes" найдётся "yes", но не "Yes" или "ohYes".'
-                    },
-                    {
-                        names: ['--delete', '-del'],
-                        description: 'Удалить сообщение вызывавшее команду.'
                     }
                 ]
             })
@@ -86,9 +73,6 @@ const commandArray = [
 
             for (const [par, par_args] of Object.entries(pars)) {
                 switch (par) {
-                    case '--help': {
-                        return this.send_help(this.message)
-                    }
                     case '-ai': {
                         this.addinf = true
                         break
@@ -119,12 +103,6 @@ const commandArray = [
                     }
                     case '--direct-search': {
                         this.matches = this.target.filter(v => v.name == this.search_query)
-                        break
-                    }
-                    case '--delete': {
-                        if (this.message.channel instanceof DMChannel) break
-                        if (!this.message.channel.permissionsFor(this.message.client.user).has('MANAGE_MESSAGES')) break
-                        await this.message.delete()
                         break
                     }
                 }
@@ -266,14 +244,8 @@ const commandArray = [
                 additional: 'В случае отсутствия аргумента выводит информацию о вас.',
                 client_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
                 member_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
-                owner_only: false,
                 guild_only: true,
                 args: [
-                    {
-                        name: 'message',
-                        type: 'Message',
-                        required: false
-                    },
                     {
                         name: 'user',
                         description: 'Юзернейм, никнейм, id, либо упоминание пользователя.\n' +
@@ -282,18 +254,6 @@ const commandArray = [
                         required: false,
                         features: 'join'
                     }
-                ],
-                pars: [
-                    {
-                        names: ['--help', '-h', '-?'],
-                        description: 'Отобразить сведения об использовании.',
-                        args: []
-                    },
-                    {
-                        names: ['--delete', '-del'],
-                        description: 'Удалить сообщение вызывавшее команду',
-                        args: []
-                    }
                 ]
             })
         }
@@ -301,20 +261,6 @@ const commandArray = [
         public async execute(args: Command_Args, pars: Command_Pars): Promise<unknown> {
             this.message = args.message as Message
             this.members = args.user as GuildMember[]
-
-            for (const [par, par_args] of Object.entries(pars)) {
-                switch (par) {
-                    case '--help': {
-                        return this.send_help(this.message)
-                    }
-                    case '--delete': {
-                        if (this.message.channel instanceof DMChannel) break
-                        if (!this.message.channel.permissionsFor(this.message.client.user).has('MANAGE_MESSAGES')) break
-                        await this.message.delete()
-                        break
-                    }
-                }
-            }
 
             if (this.members.empty) {
                 const Embed = new MessageEmbed()
@@ -395,27 +341,16 @@ const commandArray = [
         public constructor() {
             super({
                 names: ['manual'],
-                description: 'Вызывает сообщение содержащее все команды.',
+                description: 'Вызывает сообщение содержащее все команды и ивенты.',
                 additional: 'В случае передачи аргумента выводит его справочную информацию.',
                 client_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
                 member_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
                 args: [
                     {
-                        name: 'message',
-                        type: 'Message',
-                        required: false
-                    },
-                    {
                         name: 'name',
                         description: 'Название команды, или ивента',
                         required: false,
                         features: 'join'
-                    }
-                ],
-                pars: [
-                    {
-                        names: ['--help', '-h', '-?'],
-                        description: 'Отобразить сведения об использовании.'
                     }
                 ]
             })
@@ -424,14 +359,6 @@ const commandArray = [
         public async execute(args: Command_Args, pars: Command_Pars): Promise<unknown> {
             this.message = args.message as Message
             this.name = args.name as string
-
-            for (const [par, par_args] of Object.entries(pars)) {
-                switch (par) {
-                    case '--help': {
-                        return this.send_help(this.message)
-                    }
-                }
-            }
 
             if (this.name) {
                 const target = []
@@ -446,10 +373,12 @@ const commandArray = [
                 return target[0].send_help(this.message)
             }
 
-            const array = []
-                .add(client.commands.map(v => '```\n' + `${v.names[0]}\n${v.description}` + '```').join(''))
-                .add(client.events.map(v => '```\n' + `${v.name}\n${v.description}` + '```').join(''))
-
+            const array = [
+                '```' + `Что бы увидеть более подробную информацию используйте команду ${client.prefix}manual имя` + '```',
+                client.commands.map(v => '```autohotkey\n' + `Команда: ${v.names.join(', ')}\nОписание: ${v.description}` + '```').join(''),
+                client.events.map(v => '```autohotkey\n' + `Ивент: ${v.name}\nОписание: ${v.description}` + '```').join('')
+            ]
+            
             const Embed = new MessageEmbed()
                 .setDescription(array.join(''))
             this.message.channel.send(Embed)
@@ -463,20 +392,7 @@ const commandArray = [
                 names: ['help'],
                 description: 'Выводит справочную информацию об использованию бота.',
                 client_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
-                member_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
-                args: [
-                    {
-                        name: 'message',
-                        type: 'Message',
-                        required: false
-                    }
-                ],
-                pars: [
-                    {
-                        names: ['--help', '-h', '-?'],
-                        description: 'Отобразить сведения об использовании.'
-                    }
-                ]
+                member_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL']
             })
         }
 

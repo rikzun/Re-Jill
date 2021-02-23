@@ -1,4 +1,3 @@
-import { split } from 'ts-node'
 import { randint } from './functions'
 
 declare global {

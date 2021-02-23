@@ -1,6 +1,17 @@
 import { client } from '../bot'
 import { Message, TextChannel, APIMessage } from 'discord.js'
-import { MessageEmbed } from '../utils/classes'
+import { MessageEmbed, ClientEvent } from '../utils/classes'
+
+export default class MessageEmbeddingEvent extends ClientEvent {
+    constructor() {
+        super({
+            name: 'message_embedding',
+            description: 'Вставляет сообщение по отправленным в чат ссылкам.',
+            additional: 'Бот должен находится на том сервере, куда ведёт ссылка на сообщение.\n' +
+            'Если перед ссылкой стоит знак восклицания (!) ссылка не будет встроена.'
+        })    
+    }
+}
 
 client.on('message', async (message: Message) => {
     if (message.author.bot) return
@@ -10,7 +21,7 @@ client.on('message', async (message: Message) => {
     const [, char, guildID, channelID, messageID] = message_link_regex
 
     //escape char trigger
-    if (char) return
+    if (char || message.content.startsWith(client.prefix)) return
 
     try {
         const channel = client.guilds.cache.get(guildID).channels.cache.get(channelID) as TextChannel
@@ -45,7 +56,5 @@ client.on('message', async (message: Message) => {
 
         await message.channel.send(rtmsg, embeds)
         await message.channel.send(infoEmbed)
-    } catch (error) {
-        console.log(error)
-    }
+    } catch (error) {}
 })

@@ -1,7 +1,8 @@
 import { Collection, Message, DMChannel } from 'discord.js'
 import { ClientCommand, MessageEmbed, Command_Args, Command_Pars } from '../utils/classes'
-import { emoji_regex, unicode_emoji_regex } from '../utils/regex'
+import { emoji_regex, unicode_emoji_regex, message_link } from '../utils/regex'
 import { emojis } from '../events/emoji_data'
+import { fetchMessageLink } from '../utils/functions'
 
 const command_array = [
     class EmojiCommand extends ClientCommand {
@@ -22,11 +23,6 @@ const command_array = [
                 member_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
                 args: [
                     {
-                        name: 'message',
-                        type: 'Message',
-                        required: false
-                    },
-                    {
                         name: 'emoji_array',
                         description: 'Эмодзи, точные имена эмодзи, либо их ID. Так же поддерживаются стандартные эмодзи.\n' +
                         '\t(например "trololo", "801454131101302814" или "👍🏿")',
@@ -35,10 +31,6 @@ const command_array = [
                     }
                 ],
                 pars: [
-                    {
-                        names: ['--help', '-h', '-?'],
-                        description: 'Отобразить сведения об использовании.'
-                    },
                     {
                         names: ['-s'],
                         description: 'Использовать пробелы как разделитель эмодзи.'
@@ -57,10 +49,6 @@ const command_array = [
                     {
                         names: ['--dont-ignore-case', '-dic'],
                         description: 'Не игнорировать регистр при поиске.'
-                    },
-                    {
-                        names: ['--delete', '-del'],
-                        description: 'Удалить сообщение вызывавшее команду'
                     }
                 ]
             })
@@ -70,13 +58,12 @@ const command_array = [
             this.message = args.message as Message
             this.ignore_case = true
             this.separator = ''
+            this.emoji_array = this._content_fix(args.emoji_array as string[])
+            this.matches = this._find_emojis()
             delete this.choise
 
             for (const [par, par_args] of Object.entries(pars)) {
                 switch (par) {
-                    case '--help': {
-                        return this.send_help(this.message)
-                    }
                     case '-s': {
                         this.separator = ' '
                         break
@@ -92,17 +79,8 @@ const command_array = [
                         this.ignore_case = false
                         break
                     }
-                    case '--delete': {
-                        if (this.message.channel instanceof DMChannel) break
-                        if (!this.message.channel.permissionsFor(this.message.client.user).has('MANAGE_MESSAGES')) break
-                        await this.message.delete()
-                        break
-                    }
                 }
             }
-
-            this.emoji_array = this._content_fix(args.emoji_array as string[])
-            this.matches = this._find_emojis()
 
             //some emojis check
             if (!this.matches.filter(v => v.length > 1).empty) {
@@ -219,6 +197,119 @@ const command_array = [
                     await (await sent_message).delete()
                 } catch (error) {}
             })
+        }
+    },
+    class TextToEmojiCommand extends ClientCommand {
+        message: Message
+        text: string[]
+        dictionary: {
+            [character: string]: string
+        }
+
+        public constructor() {
+            super({
+                names: ['tte'],
+                description: 'Переводит текст в эмодзи.',
+                additional: 'Работает только с английскими символами и цифрами.',
+                client_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
+                member_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
+                args: [
+                    {
+                        name: 'text',
+                        required: true,
+                        features: 'join'
+                    }
+                ]
+            })
+
+            this.dictionary = {
+                'a': '🇦', 'b': '🇧', 'c': '🇨', 'd': '🇩', 'e': '🇪',
+                'f': '🇫', 'g': '🇬', 'h': '🇭', 'i': '🇮', 'j': '🇯',
+                'k': '🇰', 'l': '🇱', 'm': '🇲', 'n': '🇳', 'o': '🇴',
+                'p': '🇵', 'q': '🇶', 'r': '🇷', 's': '🇸', 't': '🇹',
+                'u': '🇺', 'v': '🇻', 'w': '🇼', 'x': '🇽', 'y': '🇾',
+                'z': '🇿', ' ': ' ',
+                '0': '0️⃣', '1': '1️⃣', '2': '2️⃣', '3': '3️⃣', '4': '4️⃣',
+                '5': '5️⃣', '6': '6️⃣', '7': '7️⃣', '8': '8️⃣', '9': '9️⃣'
+            }
+        }
+
+        public async execute(args: Command_Args, pars: Command_Pars): Promise<unknown> {
+            this.message = args.message as Message
+            this.text = Array.from((args.text as string).toLocaleLowerCase())
+
+            const rt = []
+            for (const char of this.text) {
+                if (!this.dictionary.hasOwnProperty(char)) continue
+                rt.push(this.dictionary[char])
+            }
+
+            if (rt.empty) {
+                const Embed = new MessageEmbed()
+                    .setDescription('🚫 Указанные символы не поддерживаются.')
+                return this.message.channel.send(Embed)
+            }
+
+            await this.message.channel.send(rt.join(' '))
+        }
+    },
+    class TranslateWrongLayoutCommand extends ClientCommand {
+        message: Message
+        text: string[]
+        dictionary: {
+            [character: string]: string
+        }
+
+        public constructor() {
+            super({
+                names: ['twl'],
+                description: 'Переводит ntrcn в текст.',
+                additional: 'Работает только с английскими символами и цифрами.',
+                client_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
+                member_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
+                args: [
+                    {
+                        name: 'text',
+                        description: 'Текст, либо ссылка на сообщение.',
+                        required: true,
+                        features: 'join'
+                    }
+                ]
+            })
+
+            this.dictionary = {
+                'f': 'а', 'F': 'А', ',': 'б', '<': 'Б', 'd': 'в',
+                'D': 'В', 'u': 'г', 'U': 'Г', 'l': 'д', 'L': 'Д',
+                't': 'е', 'T': 'Е', '`': 'ё', '~': 'Ё', ';': 'ж',
+                ':': 'Ж', 'p': 'з', 'P': 'З', 'b': 'и', 'B': 'И',
+                'q': 'й', 'Q': 'Й', 'r': 'к', 'R': 'К', 'k': 'л',
+                'K': 'Л', 'v': 'м', 'V': 'М', 'y': 'н', 'Y': 'Н',
+                'j': 'о', 'J': 'О', 'g': 'п', 'G': 'П', 'h': 'р', 
+                'H': 'Р', 'c': 'с', 'C': 'С', 'n': 'т', 'N': 'Т',
+                'e': 'у', 'E': 'У', 'a': 'ф', 'A': 'Ф', '[': 'х',
+                '{': 'Х', 'w': 'ц', 'W': 'Ц', 'x': 'ч', 'X': 'Ч',
+                'i': 'ш', 'I': 'Ш', 'o': 'щ', 'O': 'Щ', ']': 'ъ',
+                '}': 'Ъ', 's': 'ы', 'S': 'Ы', 'm': 'ь', 'M': 'Ь',
+                '\'': 'э', '"': 'Э', '.': 'ю', '>': 'Ю', 'z': 'я',
+                'Z': 'Я', '@': '"', '#': '№', '$': ';', '^': ':',
+                '&': '?', '?': ','
+            }
+        }
+
+        public async execute(args: Command_Args, pars: Command_Pars): Promise<unknown> {
+            this.message = args.message as Message
+            if (message_link.test(args.text as string)) {
+                this.text = Array.from((await fetchMessageLink(args.text as string)).content)
+            } else { this.text = Array.from(args.text as string) }
+
+            const rt = this.text.map(v => this.dictionary.hasOwnProperty(v) ? this.dictionary[v] : v)
+            if (rt.empty) {
+                const Embed = new MessageEmbed()
+                    .setDescription('🚫 Указанные символы не поддерживаются.')
+                return this.message.channel.send(Embed)
+            }
+
+            await this.message.channel.send(rt.join(''))
         }
     }
 ]

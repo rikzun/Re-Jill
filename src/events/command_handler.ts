@@ -188,6 +188,20 @@ async function message_handler(message: Message): Promise<unknown> {
             }
         }
     }
-    
+
+    for (const [par, par_args] of Object.entries(transfer_pars)) {
+        switch (par) {
+            case '--help': {
+                return client_cmd.send_help(message)
+            }
+            case '--delete': {
+                if (message.channel instanceof DMChannel) break
+                if (!message.channel.permissionsFor(message.client.user).has('MANAGE_MESSAGES')) break
+                await message.delete()
+                break
+            }
+        }
+    }
+
     await client_cmd.execute(transfer_args, transfer_pars)
 }
