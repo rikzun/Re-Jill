@@ -113,7 +113,7 @@ const command_array = [
                 }
             }
 
-            return this.message.channel.send(this.matches.join(this.separator))
+            return this.message.channel.send(this.matches.join(this.separator).replace(/\n\s/g, '\n'))
         }
 
         private _content_fix(emoji_array: string[]): string[] {
@@ -216,6 +216,7 @@ const command_array = [
                 args: [
                     {
                         name: 'text',
+                        description: 'Английские буквы и/или цифры.',
                         required: true,
                         features: 'join'
                     }
@@ -228,7 +229,7 @@ const command_array = [
                 'k': '🇰', 'l': '🇱', 'm': '🇲', 'n': '🇳', 'o': '🇴',
                 'p': '🇵', 'q': '🇶', 'r': '🇷', 's': '🇸', 't': '🇹',
                 'u': '🇺', 'v': '🇻', 'w': '🇼', 'x': '🇽', 'y': '🇾',
-                'z': '🇿', ' ': ' ',
+                'z': '🇿', ' ': ' ', '\n': '\n',
                 '0': '0️⃣', '1': '1️⃣', '2': '2️⃣', '3': '3️⃣', '4': '4️⃣',
                 '5': '5️⃣', '6': '6️⃣', '7': '7️⃣', '8': '8️⃣', '9': '9️⃣'
             }
@@ -249,8 +250,13 @@ const command_array = [
                     .setDescription('🚫 Указанные символы не поддерживаются.')
                 return this.message.channel.send(Embed)
             }
+            if (rt.length > 1950) {
+                const Embed = new MessageEmbed()
+                    .setDescription('🚫 Сообщение слишком большое.')
+                return this.message.channel.send(Embed)
+            }
 
-            await this.message.channel.send(rt.join(' '))
+            await this.message.channel.send(rt.join(' ').replace(/\n\s/g, '\n'))
         }
     },
     class TranslateWrongLayoutCommand extends ClientCommand {
