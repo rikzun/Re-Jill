@@ -1,11 +1,11 @@
 import { Collection, Message, DMChannel } from 'discord.js'
-import { ClientCommand, MessageEmbed, Command_Args, Command_Pars } from '../utils/classes'
+import { Command, MessageEmbed, Command_Args, Command_Pars } from '../utils/classes'
 import { emoji_regex, unicode_emoji_regex, message_link } from '../utils/regex'
 import { emojis } from '../events/emoji_data'
 import { fetchMessageLink } from '../utils/functions'
 
 const command_array = [
-    class EmojiCommand extends ClientCommand {
+    class EmojiCommand extends Command {
         message: Message
         emoji_array: string[]
         matches: unknown[][]
@@ -19,13 +19,11 @@ const command_array = [
                 description: 'Выводит указанный эмодзи.',
                 additional: 'Без использования дополнительных параметров осуществляется точный поиск с игнорированием регистра.\n' +
                 '(например при поиске "yes" найдётся "Yes", но не "ohYes")',
-                client_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
-                member_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
                 args: [
                     {
                         name: 'emoji_array',
-                        description: 'Эмодзи, точные имена эмодзи, либо их ID. Так же поддерживаются стандартные эмодзи.\n' +
-                        '\t(например "trololo", "801454131101302814" или "👍🏿")',
+                        description: 'Эмодзи, точные имена эмодзи, либо их ID.\nТак же поддерживаются стандартные эмодзи.\n' +
+                        '(например "trololo", "801454131101302814" или "👍🏿")',
                         required: true,
                         features: 'array'
                     }
@@ -50,11 +48,12 @@ const command_array = [
                         names: ['--dont-ignore-case', '-dic'],
                         description: 'Не игнорировать регистр при поиске.'
                     }
-                ]
+                ],
+                client_perms: ['USE_EXTERNAL_EMOJIS']
             })
         }
 
-        public async execute(args: Command_Args, pars: Command_Pars): Promise<unknown> {
+        public async execute(args: Command_Args, pars: Command_Pars) {
             this.message = args.message as Message
             this.ignore_case = true
             this.separator = ''
@@ -199,7 +198,7 @@ const command_array = [
             })
         }
     },
-    class TextToEmojiCommand extends ClientCommand {
+    class TextToEmojiCommand extends Command {
         message: Message
         text: string[]
         dictionary: {
@@ -211,8 +210,6 @@ const command_array = [
                 names: ['tte'],
                 description: 'Переводит текст в эмодзи.',
                 additional: 'Работает только с английскими символами и цифрами.',
-                client_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
-                member_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
                 args: [
                     {
                         name: 'text',
@@ -235,7 +232,7 @@ const command_array = [
             }
         }
 
-        public async execute(args: Command_Args, pars: Command_Pars): Promise<unknown> {
+        public async execute(args: Command_Args, pars: Command_Pars) {
             this.message = args.message as Message
             this.text = Array.from((args.text as string).toLocaleLowerCase())
 
@@ -259,7 +256,7 @@ const command_array = [
             await this.message.channel.send(rt.join(' ').replace(/\n\s/g, '\n'))
         }
     },
-    class TranslateWrongLayoutCommand extends ClientCommand {
+    class TranslateWrongLayoutCommand extends Command {
         message: Message
         text: string[]
         dictionary: {
@@ -271,8 +268,6 @@ const command_array = [
                 names: ['twl'],
                 description: 'Переводит ntrcn в текст.',
                 additional: 'Работает только с английскими символами и цифрами.',
-                client_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
-                member_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
                 args: [
                     {
                         name: 'text',
@@ -302,7 +297,7 @@ const command_array = [
             }
         }
 
-        public async execute(args: Command_Args, pars: Command_Pars): Promise<unknown> {
+        public async execute(args: Command_Args, pars: Command_Pars) {
             this.message = args.message as Message
             if (message_link.test(args.text as string)) {
                 this.text = Array.from((await fetchMessageLink(args.text as string)).content)

@@ -1,12 +1,14 @@
 import { Collection, Message, MessageReaction, DMChannel, GuildEmoji, Guild, GuildMember } from 'discord.js'
-import { ClientCommand, MessageEmbed, Command_Args, Command_Pars } from '../utils/classes'
+import { Command, MessageEmbed, Command_Args, Command_Pars } from '../utils/classes'
+import { OSU_SECRET, OSU_ID } from '../config'
 import { strftime } from '../utils/functions'
 import { tr } from '../utils/translate'
 import { emojis } from '../events/emoji_data'
 import { client } from '../bot'
+import axios from 'axios'
 
 const commandArray = [
-    class EmojiSearchCommand extends ClientCommand {
+    class EmojiSearchCommand extends Command {
         message: Message
         search_query: string
         target: GuildEmoji[]
@@ -19,16 +21,13 @@ const commandArray = [
             super({
                 names: ['searchemoji', 'sem'],
                 description: 'Ищет указанный эмодзи.',
-                additional: 'В случае отсутствия аргумента выводит список всех доступных эмодзи.' +
+                additional: 'В случае отсутствия аргумента выводит список всех доступных эмодзи.\n' +
                 'Без использования дополнительных параметров осуществляется вложенный поиск, а так же игнорируется регистр.\n' +
                 '(например при поиске "yes" найдутся "Yes" и "ohYes")',
-                client_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
-                member_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
                 args: [
                     {
                         name: 'search_query',
                         description: 'Название эмодзи.',
-                        required: false,
                         features: 'join'
                     }
                 ],
@@ -40,7 +39,6 @@ const commandArray = [
                             {
                                 name: 'guild_array',
                                 type: 'Guilds',
-                                required: false,
                                 features: 'join'
                             }
                         ]
@@ -56,13 +54,13 @@ const commandArray = [
                     {
                         names: ['--direct-search', '-ds'],
                         description: 'Искать только абсолютные совпадения.\n' +
-                        '\tВ этом случае при поиске "yes" найдётся "yes", но не "Yes" или "ohYes".'
+                        'В этом случае при поиске "yes" найдётся "yes", но не "Yes" или "ohYes".'
                     }
                 ]
             })
         }
 
-        public async execute(args: Command_Args, pars: Command_Pars): Promise<unknown> {
+        public async execute(args: Command_Args, pars: Command_Pars) {
             this.message = args.message as Message
             this.search_query = args.search_query as string ?? ''
             this.target = emojis
@@ -233,7 +231,7 @@ const commandArray = [
             }
         }
     },
-    class UserCommand extends ClientCommand {
+    class UserCommand extends Command {
         message: Message
         members: GuildMember[]
 
@@ -242,23 +240,20 @@ const commandArray = [
                 names: ['user'],
                 description: 'Выводит информацию о пользователе.',
                 additional: 'В случае отсутствия аргумента выводит информацию о вас.',
-                client_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
-                member_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
                 guild_only: true,
                 args: [
                     {
                         name: 'user',
                         description: 'Юзернейм, никнейм, id, либо упоминание пользователя.\n' +
-                        '\t(например "Jill", "608154725338185738" или "Jill#8599")',
+                        '(например "Jill", "608154725338185738" или "Jill#8599")',
                         type: 'GuildMembers',
-                        required: false,
                         features: 'join'
                     }
                 ]
             })
         }
 
-        public async execute(args: Command_Args, pars: Command_Pars): Promise<unknown> {
+        public async execute(args: Command_Args, pars: Command_Pars) {
             this.message = args.message as Message
             this.members = args.user as GuildMember[]
 
@@ -280,7 +275,7 @@ const commandArray = [
         
             let platform = Object.keys(presence.clientStatus ?? []).map(e => tr(e))
             if (member.user.bot) platform = ['Бот']
-        
+
             info[0] = []
                 .add(`Псевдоним: ${member.nickname}`, member.nickname, 'Псевдоним: отсутствует')
                 .add(`Пользователь: ${member.user.tag}`)
@@ -292,6 +287,7 @@ const commandArray = [
             info[1] = []
             for (const activity of presence.activities) {
                 if (activity.type == 'CUSTOM_STATUS') {
+                    if (!activity.state) continue
                     info[1].push(activity.state.replace(/```/g, ''))
                     continue
                 }
@@ -334,7 +330,7 @@ const commandArray = [
             })
         }
     },
-    class ManualCommand extends ClientCommand {
+    class ManualCommand extends Command {
         message: Message
         name: string
 
@@ -343,20 +339,17 @@ const commandArray = [
                 names: ['manual'],
                 description: 'Вызывает сообщение содержащее все команды и ивенты.',
                 additional: 'В случае передачи аргумента выводит его справочную информацию.',
-                client_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
-                member_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
                 args: [
                     {
                         name: 'name',
-                        description: 'Название команды, или ивента',
-                        required: false,
+                        description: 'Название команды, или ивента.',
                         features: 'join'
                     }
                 ]
             })
         }
 
-        public async execute(args: Command_Args, pars: Command_Pars): Promise<unknown> {
+        public async execute(args: Command_Args, pars: Command_Pars) {
             this.message = args.message as Message
             this.name = args.name as string
 
@@ -375,7 +368,7 @@ const commandArray = [
 
             const array = [
                 '```' + `Что бы увидеть более подробную информацию используйте команду ${client.prefix}manual имя` + '```',
-                client.commands.map(v => '```autohotkey\n' + `Команда: ${v.names.join(', ')}\nОписание: ${v.description}` + '```').join(''),
+                client.commands.filter(v => !v.owner_only).map(v => '```autohotkey\n' + `Команда: ${v.names.join(', ')}\nОписание: ${v.description}` + '```').join(''),
                 client.events.map(v => '```autohotkey\n' + `Ивент: ${v.name}\nОписание: ${v.description}` + '```').join('')
             ]
             
@@ -384,28 +377,18 @@ const commandArray = [
             this.message.channel.send(Embed)
         }
     },
-    class HelpCommand extends ClientCommand {
+    class HelpCommand extends Command {
         message: Message
 
         public constructor() {
             super({
                 names: ['help'],
-                description: 'Выводит справочную информацию об использованию бота.',
-                client_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL'],
-                member_perms: ['SEND_MESSAGES', 'VIEW_CHANNEL']
+                description: 'Выводит справочную информацию об использованию бота.'
             })
         }
 
-        public async execute(args: Command_Args, pars: Command_Pars): Promise<unknown> {
+        public async execute(args: Command_Args, pars: Command_Pars) {
             this.message = args.message as Message
-
-            for (const [par, par_args] of Object.entries(pars)) {
-                switch (par) {
-                    case '--help': {
-                        return this.send_help(this.message)
-                    }
-                }
-            }
 
             const info = [
                 '```',
@@ -423,7 +406,153 @@ const commandArray = [
                 
             const Embed = new MessageEmbed()
                 .setDescription(info.join('\n'))
-            this.message.channel.send(Embed)
+            return this.message.channel.send(Embed)
+        }
+    },
+    class OsuCommand extends Command {
+        message: Message
+        username: string
+        mode: string
+        info: string
+        token: string
+        duration: number
+
+        public constructor() {
+            super({
+                names: ['osu'],
+                description: 'Отображение информации из профиля в игре osu.',
+                args: [
+                    {
+                        name: 'username',
+                        description: 'Имя пользователя или его ID в osu.',
+                        required: true,
+                        features: 'join'
+                    }
+                ],
+                pars: [
+                    {
+                        names: ['--mode'],
+                        description: 'Один из режимов игры.',
+                        args: [
+                            {
+                                name: 'mod_name',
+                                required: true,
+                                value: 'osu',
+                                values_array: ['osu', 'taiko', 'fruits', 'mania']
+                            }
+                        ]
+                    }
+                ]
+            })
+        }
+
+        public async execute(args: Command_Args, pars: Command_Pars) {
+            this.message = args.message as Message
+            this.username = args.username as string
+
+            for (const [par, par_args] of Object.entries(pars)) {
+                switch (par) {
+                    case '--mode': {
+                        this.mode = par_args.mod_name as string
+                    }
+                }
+            }
+
+            if (this.duration ?? 0 < Date.now()) await this.create_token()
+
+            let data: any
+            try {
+                data = (await axios({
+                    method: 'GET',
+                    url: `https://osu.ppy.sh/api/v2/users/${this.username}/${this.mode}`,
+                    headers: {
+                        Authorization: this.token
+                    }
+                })).data
+            } catch (error) {
+                const Embed = new MessageEmbed()
+                    .setDescription('🚫 Пользователь не найден')
+                return this.message.channel.send(Embed)
+            }
+
+            const [int, fl] = String(data.statistics.hit_accuracy).split('.')
+            if (fl?.length > 3) data.statistics.hit_accuracy = int + ',' + fl.slice(0, 2) +'%'
+
+            if (data.is_bot) data.username += ' [БОТ]'
+            if (data.is_active) data.username += ' [ОНЛАЙН]'
+            if (data.is_supporter) data.username += ' [СПОНСОР]'
+
+            const playtime = new Date(data.statistics.play_time * 1000)
+            data.statistics.play_time = `${playtime.getUTCDate() - 1}d ${playtime.getUTCHours()}h ${playtime.getUTCMinutes()}m`
+
+            const info = []
+            info[0] = [
+                'Уровень: ' + data.statistics.level.current,
+                'Точность: ' + data.statistics.hit_accuracy,
+                'PP: ' + this.cutification(Math.floor(data.statistics.pp)),
+                'Макс комбо: ' + this.cutification(data.statistics.maximum_combo),
+                'Ранг в мире: #' + this.cutification(data.statistics.global_rank),
+                'Ранг в стране: #' + this.cutification(data.statistics.country_rank),
+                'Времени в игре: ' + data.statistics.play_time
+            ]
+
+            info[1] = [
+                'SS+: ' + data.statistics.grade_counts.ss,
+                'SS: ' + data.statistics.grade_counts.ssh,
+                'S+: ' + data.statistics.grade_counts.s,
+                'S: ' + data.statistics.grade_counts.sh,
+                'A: ' + data.statistics.grade_counts.a
+            ]
+
+            info[2] = [
+                'Медалей: ' + data.user_achievements.length,
+                'Регистрация: ' + strftime(data.join_date, '%d.%m.%y %H:%M:%S'),
+                'Последний визит: ' + strftime(data.last_visit, '%d.%m.%y %H:%M:%S')
+            ]
+
+            const Embed = new MessageEmbed()
+                .setThumbnail(data.avatar_url)
+                .setAuthor(data.username, `https://osu.ppy.sh/images/flags/${data.country_code}.png`, `https://osu.ppy.sh/users/${data.id}`)
+                .addFields(
+                    {
+                        name: 'Статистика',
+                        inline: true,
+                        value: '```\n' + info[0].join('\n') + '```'
+                    },
+                    {
+                        name: 'Оценки',
+                        inline: true,
+                        value: '```\n' + info[1].join('\n') + '```'
+                    },
+                    {
+                        name: 'Общая информация',
+                        value: '```\n' + info[2].join('\n') + '```'
+                    }
+                )
+                .setFooter(`Режим игры ${this.mode}`)
+
+            return this.message.channel.send(Embed)
+        }
+
+        async create_token() {
+            const data = (await axios({
+                method: 'POST',
+                url: 'https://osu.ppy.sh/oauth/token',
+                data: {
+                    client_id: OSU_ID,
+                    client_secret: OSU_SECRET,
+                    grant_type: 'client_credentials',
+                    scope: 'public'
+                }
+            })).data
+
+            this.token = data.token_type + ' ' + data.access_token
+            this.duration = data.expires_in * 1000 + Date.now() - 6e4
+        }
+
+        cutification(num: any): string {
+            if (!num) return '0'
+            return Array.from(String(num)).reverse().map((v, i, a) => (i + 1) % 3 == 0 && a[i + 1] !== undefined ? ' ' + v : v).reverse().join('')
         }
     }
 ]

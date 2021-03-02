@@ -3,8 +3,6 @@ import { randint } from './functions'
 declare global {
     interface String {
         isNumber: boolean
-        indexOfAll(elem: string): number[]
-        matchAll(regexp: RegExp): RegExpMatchArray[]
         ssplit(separator: string): string[]
     }
     interface Number {
@@ -21,40 +19,14 @@ declare global {
         randomKey(): unknown
         randomValue(): unknown
         empty: boolean,
-        getKeyByValue(value: unknown): unknown | null
+        getKeyByValue(value: string | number | symbol): unknown | null
+        withoutProps(...items: (string | number | symbol)[]): this
     }
 }
 
 Object.defineProperty(String.prototype, 'isNumber', {
     get: function(): boolean {
         return /^\d*\.?\d+$/gm.test(this)
-    }
-})
-
-Object.defineProperty(String.prototype, 'indexOfAll', {
-    value: function(elem: string): number[] {
-        let text = this.repeat(1)
-        const amount = text.match(new RegExp(elem, 'g')).length
-        const indices = []
-        for (let i = 0; i < amount; i++) {
-            const index = text.indexOf(elem)
-            indices.push(index)
-            text = text.replaceIndex(index, ' '.repeat(elem.length))
-        }
-
-        return indices
-    }
-})
-
-Object.defineProperty(String.prototype, 'matchAll', {
-    value: function(regexp: RegExp): RegExpMatchArray[] {
-        const arr = []
-        for (let match = regexp.exec(this); true; match = regexp.exec(this)) {
-            if (match == null || !regexp.global) break
-            if (match.index == regexp.lastIndex) regexp.lastIndex++
-            arr.push(match)
-        }
-        return arr
     }
 })
 
@@ -99,9 +71,8 @@ Object.defineProperty(Array.prototype, 'empty', {
 
 Object.defineProperty(Array.prototype, 'add', {
     value: function(elem1: unknown, bool: unknown = true, elem2: unknown) {
-        if (bool) {
-            this.push(elem1)
-        } else if(elem2) this.push(elem2)
+        if (bool) { this.push(elem1) }
+        else if (elem2) this.push(elem2)
         return this
     }
 })
@@ -139,7 +110,15 @@ Object.defineProperty(Object.prototype, 'empty', {
 })
 
 Object.defineProperty(Object.prototype, 'getKeyByValue', {
-    value: function(value: unknown): unknown | null {
+    value: function(value: string | number | symbol): unknown | null {
         return Object.keys(this).find(key => this[key] === value) ?? null
+    }
+})
+
+Object.defineProperty(Object.prototype, 'withoutProps', {
+    value: function(...items: (string | number | symbol)[]) {
+        const object: Object = Object.assign(this)
+        for (const property of items) delete object[property]
+        return object
     }
 })

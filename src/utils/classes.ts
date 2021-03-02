@@ -1,8 +1,8 @@
 import { PermissionString, MessageEmbed as OldMessageEmbed, Message } from 'discord.js'
 import { tr } from './translate'
 export { 
-    ClientCommand, CommandOptions, MessageEmbed, Command_Args, 
-    Command_Pars, Constructors, Client_Argument, ClientEvent
+    Command, CommandOptions, MessageEmbed, Command_Args, 
+    Command_Pars, Constructors, Argument, ClientEvent
 }
 
 type Constructors =
@@ -18,9 +18,40 @@ type Features =
 interface Command_Argument {
     name: string
     description?: string
-    required: boolean
+
+    required?: boolean
     type?: Constructors
+
     features?: Features
+
+    value?: unknown
+    values_array?: unknown[]
+}
+
+class Argument {
+    readonly name: string
+    readonly description: string
+
+    readonly required: boolean
+    readonly type: Constructors
+
+    readonly features: Features
+
+    readonly value: unknown
+    readonly values_array: unknown[]
+
+    constructor(cmd_arg: Command_Argument) {
+        this.name = cmd_arg.name
+        this.description = cmd_arg.description
+
+        this.required = cmd_arg.required ?? false
+        this.type = cmd_arg.type
+
+        this.features = cmd_arg.features
+        
+        this.value = cmd_arg.value
+        this.values_array = cmd_arg.values_array
+    }
 }
 
 interface Command_Parameter {
@@ -29,35 +60,28 @@ interface Command_Parameter {
     args?: Command_Argument[]
 }
 
-interface Command_Args {
-    [arg_name: string]: unknown
+class Parameter {
+    readonly names: string[]
+    readonly description: string
+    readonly args: Argument[]
+
+    constructor(cmd_par: Command_Parameter) {
+        this.names = cmd_par.names
+        this.description = cmd_par.description ?? 'Описание отсутствует'
+        this.args = (cmd_par.args ?? []).map(v => new Argument(v))
+    }
 }
 
-interface Command_Pars {
-    [par_name: string]: Command_Args
-}
-
-interface Client_Argument {
-    name: string
-    description: string
-    required: boolean
-    type?: Constructors
-    features?: Features
-}
-
-interface Client_Parameter {
-    names: string[]
-    description: string
-    args: Client_Argument[]
-}
+interface Command_Args { [arg_name: string]: unknown }
+interface Command_Pars { [par_name: string]: Command_Args }
 
 interface CommandOptions {
     names: string[]
     description?: string
     additional?: string
-    
-    client_perms: PermissionString[]
-    member_perms: PermissionString[]
+
+    client_perms?: PermissionString[]
+    member_perms?: PermissionString[]
 
     owner_only?: boolean
     guild_only?: boolean
@@ -66,7 +90,7 @@ interface CommandOptions {
     pars?: Command_Parameter[]
 }
 
-abstract class ClientCommand {
+abstract class Command {
     readonly names: string[]
     readonly description: string
     readonly additional: string
@@ -77,97 +101,73 @@ abstract class ClientCommand {
     readonly owner_only: boolean
     readonly guild_only: boolean
 
-    readonly args: Client_Argument[]
-    readonly pars: Client_Parameter[]
+    readonly args: Argument[]
+    readonly pars: Parameter[]
     
     constructor(options: CommandOptions) {
         this.names = options.names
         this.description = options.description ?? 'отсутствует'
         this.additional = options.additional
 
-        this.client_perms = options.client_perms
-        this.member_perms = options.member_perms
+        this.client_perms = ['SEND_MESSAGES', 'VIEW_CHANNEL', ...options.client_perms ?? []]
+        this.member_perms = ['SEND_MESSAGES', 'VIEW_CHANNEL', ...options.member_perms ?? []]
 
         this.owner_only = options.owner_only ?? false
         this.guild_only = options.guild_only ?? false
-        
-        this.args = [
-            {
-                name: 'message',
-                description: '',
-                type: 'Message',
-                required: false
-            }
-        ]
 
-        this.pars = [
-            {
-                names: ['--help', '-h', '-?'],
-                description: 'Отобразить сведения об использовании.',
-                args: []
-            },
-            {
-                names: ['--delete', '-del'],
-                description: 'Удалить сообщение вызывавшее команду',
-                args: []
-            }
-        ]
+        if (!options.args) options.args = []
+        if (!options.pars) options.pars = []
 
-        for (const arg of options.args ?? []) {
-            if (!arg.description) arg.description = 'отсутствует'
-            this.args.push(arg as Client_Argument)
-        }
+        this.args = options.args.map(v => new Argument(v))
 
-        for (const par of options.pars ?? []) {
-            if (!par.description) par.description = 'отсутствует'
-            if (!par.args) par.args = []
-            this.pars.push(par as Client_Parameter)
-        }
+        options.pars.push(
+            {names: ['--help', '-h', '-?'], description: 'Отобразить сведения об использовании.'},
+            {names: ['--delete', '-del', '-d'], description: 'Удалить сообщение вызывавшее команду.'}
+        )
+        this.pars = options.pars.map(v => new Parameter(v))
     }
 
-    abstract execute(args: Command_Args, pars: Command_Pars): Promise<unknown>
+    abstract execute(args: Command_Args, pars: Command_Pars): Promise<Message|void>
     send_help(message: Message): void {
-        const args = []
-        const pars = []
+        function normalize(arg: Argument): string {
+            let name = arg.name
+            let rt = '  '
 
-        for (const arg of this.args) {
-            if (arg.type == 'Message') continue
+            if (arg.features == 'array') name = '...' + name
+            if (arg.features == 'join') name += '*'
+            if (!arg.required) name += '?'
 
-            let first_line = arg.name
-            if (arg.features == 'array') first_line = '...' + first_line
-            if (arg.features == 'join') first_line += '*'
-            if (!arg.required) first_line += '?'
+            rt += `Аргумент: <${name}>`
+            if(arg.description) rt += '\nОписание: ' + arg.description.split('\n').join('\n  ')
 
-            args.push(`  <${first_line}>\n\t${arg.description}\n`)
+            if (arg.value) rt += '\nЗначение по умолчанию: ' + arg.value
+            if (arg.values_array) rt += '\nДоступные значения: ' + arg.values_array.join(' | ')
+
+            return rt.split('\n').join('\n  ')
         }
-        for (const par of this.pars) {
-            let first_line = par.names.join(', ')
 
-            if (!par.args.empty) first_line += ' ' + par.args.map(vv => {
-                let first_line_arg = vv.name
-                if (vv.features == 'array') first_line_arg = '...' + first_line_arg
-                if (vv.features == 'join') first_line_arg += '*'
-                if (!vv.required) first_line_arg += '?'
+        function normalizePar(par: Parameter) {
+            let rt = '  '
 
-                return `<${first_line_arg}>`
-            }).join(', ')
+            rt += 'Параметр: ' + par.names.join(', ')
+            if (par.description) rt += '\nОписание: ' + par.description
+            if (!par.args.empty) rt += '\nАргументы:\n' + par.args.map(v => normalize(v)).join('\n')
 
-            pars.push(`  ${first_line}\n\t${par.description}\n`)
+            return rt.split('\n').join('\n  ')
         }
-        const desc = []
-            .add('```autohotkey')
-            .add((this.names.length > 1 ? 'Имена' : 'Имя') + ` команды: ${this.names.join(', ')}.`)
-            .add(`Описание: ${this.description}`)
-            .add(`Дополнительно: ${this.additional}\n`, this.additional)
-            .add(`Аргументы:\n${args.join('\n')}`, !args.empty, 'Аргументы:\n  отсутствуют\n')
-            .add(`Параметры:\n${pars.join('\n')}`, !pars.empty, 'Параметры:\n  отсутствуют\n')
-            .add('Требуемые права:', !this.client_perms.empty || this.member_perms.empty)
-            .add(`  Бота:\n${this.client_perms.map(v => `\t${tr(v)}`).join(',\n')}\n`, !this.client_perms.empty)
-            .add(`  Пользователя:\n${this.member_perms.map(v => `\t${tr(v)}`).join(',\n')}\n`, !this.member_perms.empty)
-            .add('```')
 
         const Embed = new MessageEmbed()
-            .setDescription(desc.join('\n'))
+            .setDescription([]
+                .add('```autohotkey')
+                .add(`Имена команды: ` + this.names.join(', '))
+                .add(`Описание: ` + this.description)
+                .add(`Дополнительно: ` + this.additional, this.additional ?? false)
+                .add('\nАргументы:\n' + this.args.map(v => normalize(v)).join('\n'), !this.args.empty, 'Аргументы:\n  отсутствуют')
+                .add('\nПараметры:\n' + this.pars.map(v => normalizePar(v)).join('\n\n'), !this.pars.empty, 'Параметры:\n  отсутствуют')
+                .add('\nТребуемые права:', !this.client_perms.empty || this.member_perms.empty)
+                .add(`  Бота:\n${this.client_perms.map(v => `\t${tr(v)}`).join(',\n')}\n`, !this.client_perms.empty)
+                .add(`  Пользователя:\n${this.member_perms.map(v => `\t${tr(v)}`).join(',\n')}\n`, !this.member_perms.empty)
+                .add('```').join('\n'))
         message.channel.send(Embed)
     }
 }

@@ -1,6 +1,6 @@
 export { client }
 import { Client as OldClient, ClientOptions } from 'discord.js'
-import { ClientCommand, ClientEvent } from './utils/classes'
+import { Command, ClientEvent } from './utils/classes'
 import { CLIENT_TOKEN, CLIENT_PREFIX, CLIENT_OWNER } from './config'
 import * as path from 'path'
 import * as fs from 'fs' 
@@ -9,7 +9,7 @@ import './utils/proto'
 class Client extends OldClient {
     readonly owner: string
     readonly prefix: string
-    readonly commands: ClientCommand[]
+    readonly commands: Command[]
     readonly events: ClientEvent[]
 
     constructor(options?: ClientOptions) {

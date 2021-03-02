@@ -39,6 +39,22 @@ const trDictionary = {
     'STREAMING': 'Стримит',
     'LISTENING': 'Слушает',
     'WATCHING': 'Смотрит',
+    'rus_from': 'Русского',
+    'eng_from': 'Английского',
+    'ger_from': 'Немецкого',
+    'spa_from': 'Испанского',
+    'fre_from': 'Французского',
+    'heb_from': 'Иврита',
+    'ita_from': 'Итальянского',
+    'pol_from': 'Польского',
+    'rus_to': 'Русский',
+    'eng_to': 'Английский',
+    'ger_to': 'Немецкий',
+    'spa_to': 'Испанский',
+    'fre_to': 'Французский',
+    'heb_to': 'Иврит',
+    'ita_to': 'Итальянский',
+    'pol_to': 'Польский'
 }
 
 function tr(key: string): string {
