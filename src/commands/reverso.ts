@@ -1,4 +1,4 @@
-import { Message } from 'discord.js'
+import { Message, MessageReaction } from 'discord.js'
 import { Command, MessageEmbed, Command_Args, Command_Pars } from '../utils/classes'
 import axios from 'axios'
 import { tr } from '../utils/translate'
@@ -17,27 +17,25 @@ const commandArray = [
             super({
                 names: ['reverso', 'rev'],
                 description: 'Переводит текст используя сервис reverso.context.',
-                additional: 'Переводы могут содержать грубую лексику.\n' +
-                'Поддерживаются только Русский, Английский, Немецкий, Испанский, Французский, Иврит, Итальянский и Польский языки.',
+                additional: 'Переводы могут содержать грубую лексику.',
                 args: [
                     {
                         name: 'text',
                         description: 'Любой текст без цифр.',
-                        required: true,
                         features: 'join'
                     }
                 ],
                 pars: [
                     {
                         names: ['--from'],
-                        description: 'Язык текста который требуется перевести.',
+                        description: 'Язык текста который требуется перевести.\n' +
+                        'По умолчанию определяется автоматически.',
                         args: [
                             {
                                 name: 'lang',
                                 required: true,
                                 features: 'join',
-                                value: 'auto',
-                                values_array: ['auto', 'rus', 'eng', 'ger', 'spa', 'fre', 'heb', 'ita', 'pol']
+                                value: 'auto'
                             }
                         ]
                     },
@@ -49,18 +47,25 @@ const commandArray = [
                                 name: 'lang',
                                 required: true,
                                 features: 'join',
-                                value: 'rus',
-                                values_array: ['rus', 'eng', 'ger', 'spa', 'fre', 'heb', 'ita', 'pol']
+                                value: 'rus'
                             }
                         ]
                     },
                     {
+                        names: ['--in-context', '-ictx'],
+                        description: 'Отобразить варианты слов из контекста.',
+                    },
+                    {
                         names: ['--context', '-ctx'],
-                        description: 'Отображает варианты переводов текста из контекста.',
+                        description: 'Отображает текст в контексте.',
                     },
                     {
                         names: ['--synonyms', '-syn'],
                         description: 'Отобразить синонимы текста.',
+                    },
+                    {
+                        names: ['--langs'],
+                        description: 'Отобразить поддерживаемые языки.',
                     }
                 ]
             })
@@ -71,6 +76,24 @@ const commandArray = [
             this.message = args.message as Message
             this.text = args.text as string
             this.mode = 'translate'
+
+            const langs = {
+                ru: ['russian', 'rus', 'ru'],
+                en: ['english', 'eng', 'en'],
+                de: ['german', 'deutsch', 'ger', 'deu', 'gr', 'de'],
+                es: ['spanish', 'espanol', 'spa', 'es'],
+                fr: ['french', 'fra', 'fre', 'fr'],
+                he: ['hebrew', 'heb', 'he'],
+                it: ['italian', 'it'],
+                pl: ['polish', 'pol', 'pl'],
+                ar: ['arabic', 'ara', 'ar'],
+                nl: ['dutch', 'ndl', 'dut', 'nl'],
+                zh: ['chinese', 'zho', 'chi', 'zh'],
+                pt: ['portuguese', 'por', 'pt'],
+                rm: ['romansh', 'roh', 'rum', 'rm'],
+                tr: ['turkish', 'tur', 'tr'],
+                ja: ['japanese', 'jpn', 'pa']
+            }
 
             for (const [par, par_args] of Object.entries(pars)) {
                 switch (par) {
@@ -86,56 +109,62 @@ const commandArray = [
                         this.mode = 'context'
                         break
                     }
+                    case '--in-context': {
+                        this.mode = 'incontext'
+                        break
+                    }
                     case '--synonyms': {
                         this.mode = 'synonyms'
                         break
                     }
+                    case '--langs': {
+                        const Embed = new MessageEmbed()
+                            .setDescription(
+                                '```autohotkey\n' +
+                                Object.entries(langs).map(v => tr(v[0] + '_to') + ': ' + v[1].join(', ')).join('\n') +
+                                '```'
+                            )
+                        return this.message.channel.send(Embed)
+                    }
                 }
             }
 
-            if (this.from == 'auto') {
-                const request = await axios({
-                    method: 'POST',
-                    url: 'https://api.reverso.net/translate/v1/translation',
-                    data: {
-                        input: this.text,
-                        from: 'chi',
-                        to: this.to,
-                        format: 'text',
-                        options: {
-                            languageDetection: true
-                        }
-                    }
-                })
-
-                this.from = request.data.languageDetection.detectedLanguage
-            }
-
-            if (!this.pars[0].args[0].values_array.includes(this.from)) {
+            if (!this.text) {
                 const Embed = new MessageEmbed()
-                    .setDescription(`🚫 Язык ${this.from} не поддерживается`)
+                    .setDescription(`🚫 Вы пропустили обязательный аргумент \`text\``)
                 return this.message.channel.send(Embed)
             }
+
+            if (this.from == 'auto') await this._detectLang()
+            this._normalizeLang(langs)
+
             if (this.from == this.to && this.mode !== 'synonyms') {
                 const Embed = new MessageEmbed()
                     .setDescription(`🚫 Вы попытались перевести с ${tr(this.from + '_from')} на ${tr(this.to + '_to')}`)
                 return this.message.channel.send(Embed)
             }
 
-            enum ShortedLang {
-                rus = 'ru', eng = 'en', ger = 'de', spa = 'es',
-                fre = 'fr', heb = 'he', ita = 'it', pol = 'pl'
-            }
-
             switch (this.mode) {
                 case 'translate': {
+                    const langs = {
+                        ru: 'rus', en: 'eng', de: 'ger', es: 'spa', fr: 'fra', he: 'heb',
+                        it: 'ita', pl: 'pol', ar: 'ara', nl: 'dut', zh: 'chi', pt: 'por',
+                        rm: 'rum', tr: 'tur', ja: 'jpn'
+                    }
+
+                    if (!langs.hasOwnProperty(this.from) || !langs.hasOwnProperty(this.to)) {
+                        const Embed = new MessageEmbed()
+                            .setDescription('🚫 Вы указали неверный язык, используйте ./reverso --lang')
+                        return this.message.channel.send(Embed)
+                    }
+
                     const data = (await axios({
                         method: 'POST',
                         url: 'https://api.reverso.net/translate/v1/translation',
                         data: {
                             input: this.text,
-                            from: this.from,
-                            to: this.to,
+                            from: langs[this.from],
+                            to: langs[this.to],
                             format: 'text',
                             options: {}
                         }
@@ -156,8 +185,8 @@ const commandArray = [
                         data: {
                             source_text: this.text,
                             target_text: '',
-                            source_lang: ShortedLang[this.from],
-                            target_lang: ShortedLang[this.to],
+                            source_lang: this.from,
+                            target_lang: this.to,
                             npage: 1,
                             nrows: 10,
                             mode: 0
@@ -171,11 +200,41 @@ const commandArray = [
                         return text.replace(/<em>/g, '[').replace(/<\/em>/g, ']')
                     }
 
-                    let rt = ''
-                    if (!data.dictionary_entry_list.empty) rt += data.dictionary_entry_list.map(v => '`' + v.term + '`').join(' ') + '\n\n'
-                    if (!data.list.empty) rt += data.list.map(v => '```\n' + normalize(v.s_text) + '``````\n' + normalize(v.t_text) + '```').join('\n')
+                    if (data.list.empty) {
+                        const Embed = new MessageEmbed()
+                            .setDescription('🚫 Перевод не найден')
+                        return this.message.channel.send(Embed)
+                    }
 
-                    if (!rt) {
+                    const shards = data.list.map(v => '```\n' + normalize(v.s_text) + '``````\n' + normalize(v.t_text) + '```')
+                    const Embed = new MessageEmbed()
+                        .setTitle(`Перевод с ${tr(this.from + '_from')} на ${tr(this.to + '_to')}`)
+                        .setFooter(`Выполнено за ${(new Date().getTime() - this.start) / 1000} секунд`)
+
+                    for (let i = 0; i < shards.length; i++) Embed.addField(`Фрагмент ${i + 1}`, shards[i])
+
+                    return this.message.channel.send(Embed)
+                }
+
+                case 'incontext': {
+                    const data = (await axios({
+                        method: 'POST',
+                        url: 'https://context.reverso.net/bst-query-service',
+                        data: {
+                            source_text: this.text,
+                            target_text: '',
+                            source_lang: this.from,
+                            target_lang: this.to,
+                            npage: 1,
+                            nrows: 10,
+                            mode: 0
+                        },
+                        headers: {
+                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"
+                        }
+                    })).data
+
+                    if (data.dictionary_entry_list.empty) {
                         const Embed = new MessageEmbed()
                             .setDescription('🚫 Перевод не найден')
                         return this.message.channel.send(Embed)
@@ -183,7 +242,7 @@ const commandArray = [
                     
                     const Embed = new MessageEmbed()
                         .setTitle(`Перевод с ${tr(this.from + '_from')} на ${tr(this.to + '_to')}`)
-                        .setDescription(rt)
+                        .setDescription(data.dictionary_entry_list.map(v => '`' + v.term + '`').join(' '))
                         .setFooter(`Выполнено за ${(new Date().getTime() - this.start) / 1000} секунд`)
 
                     return this.message.channel.send(Embed)
@@ -194,7 +253,7 @@ const commandArray = [
                     try {
                         data = (await axios({
                             method: 'GET',
-                            url: encodeURI(`https://synonyms.reverso.net/synonym/${ShortedLang[this.from]}/${this.text}`),
+                            url: encodeURI(`https://synonyms.reverso.net/synonym/${this.from}/${this.text}`),
                             headers: {
                                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"
                             },
@@ -217,7 +276,36 @@ const commandArray = [
                     return this.message.channel.send(Embed)
                 }
             }
+        }
 
+        private async _detectLang() {
+            const request = await axios({
+                method: 'POST',
+                url: 'https://api.reverso.net/translate/v1/translation',
+                data: {
+                    input: this.text,
+                    from: 'rus',
+                    to: 'eng',
+                    format: 'text',
+                    options: {
+                        languageDetection: true
+                    }
+                }
+            })
+
+            this.from = request.data.languageDetection.detectedLanguage
+        }
+
+        private _normalizeLang(langs: {[lang: string]: string[]}) {
+            const from = Object.entries(langs).find(v => v[1].includes(this.from))
+            const to = Object.entries(langs).find(v => v[1].includes(this.to))
+            if (!from || !to) {
+                const Embed = new MessageEmbed()
+                    .setDescription('🚫 Вы указали неверный язык, используйте ./reverso --lang')
+                return this.message.channel.send(Embed)
+            }
+            this.from = from[0]
+            this.to = to[0]
         }
     }
 ]
