@@ -92,7 +92,7 @@ const commandArray = [
                 pt: ['portuguese', 'por', 'pt'],
                 rm: ['romansh', 'roh', 'rum', 'rm'],
                 tr: ['turkish', 'tur', 'tr'],
-                ja: ['japanese', 'jpn', 'pa']
+                ja: ['japanese', 'jpn', 'ja', 'jp']
             }
 
             for (const [par, par_args] of Object.entries(pars)) {
@@ -154,7 +154,7 @@ const commandArray = [
 
                     if (!langs.hasOwnProperty(this.from) || !langs.hasOwnProperty(this.to)) {
                         const Embed = new MessageEmbed()
-                            .setDescription('🚫 Вы указали неверный язык, используйте ./reverso --lang')
+                            .setDescription('🚫 Вы указали неверный язык, используйте ./reverso --langs')
                         return this.message.channel.send(Embed)
                     }
 
