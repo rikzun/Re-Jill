@@ -479,7 +479,7 @@ const commandArray = [
             if (fl?.length > 3) data.statistics.hit_accuracy = int + ',' + fl.slice(0, 2) +'%'
 
             if (data.is_bot) data.username += ' [БОТ]'
-            if (data.is_active) data.username += ' [ОНЛАЙН]'
+            if (data.is_online) data.username += ' [ОНЛАЙН]'
             if (data.is_supporter) data.username += ' [СПОНСОР]'
 
             if (data.avatar_url.endsWith('avatar-guest.png')) data.avatar_url = 'https://osu.ppy.sh' + data.avatar_url
