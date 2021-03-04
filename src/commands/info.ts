@@ -482,6 +482,8 @@ const commandArray = [
             if (data.is_active) data.username += ' [ОНЛАЙН]'
             if (data.is_supporter) data.username += ' [СПОНСОР]'
 
+            if (data.avatar_url.endsWith('avatar-guest.png')) data.avatar_url = 'https://osu.ppy.sh' + data.avatar_url
+
             const playtime = new Date(data.statistics.play_time * 1000)
             data.statistics.play_time = `${playtime.getUTCDate() - 1}d ${playtime.getUTCHours()}h ${playtime.getUTCMinutes()}m`
 
