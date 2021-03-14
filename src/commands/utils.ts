@@ -242,7 +242,7 @@ const command_array = [
                 rt.push(this.dictionary[char])
             }
 
-            if (rt.empty) {
+            if (rt.empty || rt.join('').replace(/\s/g, '') == '') {
                 const Embed = new MessageEmbed()
                     .setDescription('🚫 Указанные символы не поддерживаются.')
                 return this.message.channel.send(Embed)
