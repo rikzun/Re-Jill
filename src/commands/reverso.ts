@@ -18,6 +18,7 @@ const commandArray = [
                 names: ['reverso', 'rev'],
                 description: 'Переводит текст используя сервис reverso.context.',
                 additional: 'Переводы могут содержать грубую лексику.',
+                client_perms: ['EMBED_LINKS'],
                 args: [
                     {
                         name: 'text',

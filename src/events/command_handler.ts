@@ -84,7 +84,7 @@ class CommandHandler {
             }
         }
 
-        await this.command.execute(this.transfer_args, this.transfer_pars)
+        this.command.execute(this.transfer_args, this.transfer_pars)
     }
 
     async arg_handler(argument: Argument, value: string, index: number) {

@@ -24,6 +24,7 @@ const commandArray = [
                 additional: 'В случае отсутствия аргумента выводит список всех доступных эмодзи.\n' +
                 'Без использования дополнительных параметров осуществляется вложенный поиск, а так же игнорируется регистр.\n' +
                 '(например при поиске "yes" найдутся "Yes" и "ohYes")',
+                client_perms: ['EMBED_LINKS', 'USE_EXTERNAL_EMOJIS'],
                 args: [
                     {
                         name: 'search_query',
@@ -240,6 +241,7 @@ const commandArray = [
                 names: ['user'],
                 description: 'Выводит информацию о пользователе.',
                 additional: 'В случае отсутствия аргумента выводит информацию о вас.',
+                client_perms: ['EMBED_LINKS'],
                 guild_only: true,
                 args: [
                     {
@@ -339,6 +341,7 @@ const commandArray = [
                 names: ['manual'],
                 description: 'Вызывает сообщение содержащее все команды и ивенты.',
                 additional: 'В случае передачи аргумента выводит его справочную информацию.',
+                client_perms: ['EMBED_LINKS'],
                 args: [
                     {
                         name: 'name',
@@ -383,7 +386,8 @@ const commandArray = [
         public constructor() {
             super({
                 names: ['help'],
-                description: 'Выводит справочную информацию об использованию бота.'
+                description: 'Выводит справочную информацию об использованию бота.',
+                client_perms: ['EMBED_LINKS']
             })
         }
 
@@ -421,6 +425,7 @@ const commandArray = [
             super({
                 names: ['osu'],
                 description: 'Отображение информации из профиля в игре osu.',
+                client_perms: ['EMBED_LINKS'],
                 args: [
                     {
                         name: 'username',
