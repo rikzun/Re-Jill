@@ -58,3 +58,5 @@ client.on('ready', () => {
     client.user.setActivity(`${client.prefix}help`, {type: 'WATCHING'})
     console.log(true)
 })
+
+process.on('unhandledRejection', console.error)
