@@ -89,8 +89,9 @@ const command_array = [
                 for (let i = 0; i < this.matches.length; i++) positions.push(0)
 
                 while (true) {
+                    if (options.length > 10) return
+
                     options.push(positions.map((pos, index) => this.matches[index][pos]).join(this.separator))
-                
                     let found_increment = false
                     for (let i = 0; i < positions.length; i++) {
                         positions[i]++
@@ -162,11 +163,13 @@ const command_array = [
             return rt
         }
 
-        private _choose(options: string[]): void {
+        private _choose(options: string[]): unknown {
             const Embed = new MessageEmbed()
                 .setTitle('Найдено несколько совпадений...')
                 .setDescription(options.map((v, i) => `\`${i + 1}\`\n${v}\n`))
                 .setFooter('В течении 20с отправьте номер варианта.')
+
+            if (Embed.description.length >= 6000) return this.message.react('❌')
 
             const sent_message = this.message.channel.send(Embed)
             const collector = this.message.channel.createMessageCollector(

@@ -127,7 +127,7 @@ abstract class Command {
         this.pars = options.pars.map(v => new Parameter(v))
     }
 
-    abstract execute(args: Command_Args, pars: Command_Pars): Promise<Message|void>
+    abstract execute(args: Command_Args, pars: Command_Pars): Promise<unknown>
     send_help(message: Message): void {
         function normalize(arg: Argument): string {
             let name = arg.name
