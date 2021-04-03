@@ -504,10 +504,10 @@ const commandArray = [
             ]
 
             info[1] = [
-                'SS+: ' + data.statistics.grade_counts.ss,
-                'SS: ' + data.statistics.grade_counts.ssh,
-                'S+: ' + data.statistics.grade_counts.s,
-                'S: ' + data.statistics.grade_counts.sh,
+                'SS+: ' + data.statistics.grade_counts.ssh,
+                'SS: ' + data.statistics.grade_counts.ss,
+                'S+: ' + data.statistics.grade_counts.sh,
+                'S: ' + data.statistics.grade_counts.s,
                 'A: ' + data.statistics.grade_counts.a
             ]
 
