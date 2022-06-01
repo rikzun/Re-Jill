@@ -59,7 +59,7 @@ class CommandHandler {
                     return this.command.send_help(this.message)
                 }
                 case '--delete': {
-                    if (this.message.channel instanceof DMChannel) break
+                    if (this.message.channel.type === 'DM') break
                     if (!this.message.channel.permissionsFor(message.client.user).has('MANAGE_MESSAGES')) break
                     await wait(100)
                     await message.delete()
@@ -92,14 +92,14 @@ class CommandHandler {
         if (!value && argument.required) {
             const Embed = new MessageEmbed()
                 .setDescription(`🚫 Вы пропустили обязательный аргумент \`${argument.name}\``)
-            this.message.channel.send(Embed)
+            this.message.channel.send({ embeds: [Embed] })
             
             throw new Error()
         }
         if (argument.values_array && !argument.values_array.includes(value)) {
             const Embed = new MessageEmbed()
                 .setDescription(`🚫 Аргументу \`${argument.name}\` передано неверное значение`)
-            this.message.channel.send(Embed)
+            this.message.channel.send({ embeds: [Embed] })
             
             throw new Error()
         }
@@ -128,7 +128,7 @@ class CommandHandler {
                 if (!value) return [undefined]
 
                 const matches = []
-                const members = (await this.message.guild.members.fetch()).array()
+                const members = Array.from((await this.message.guild.members.fetch()).values())
 
                 //<@!id>
                 const mention = value.match(member_mention)
@@ -153,7 +153,7 @@ class CommandHandler {
 
             case 'Guilds': {
                 if (!value) return [undefined]
-                return client.guilds.cache.array().filter(v => v.name == value || v.id == value)
+                return Array.from(client.guilds.cache.values()).filter(v => v.name == value || v.id == value)
             }
         }
     }
@@ -161,7 +161,7 @@ class CommandHandler {
     async check_requirements() {
         const client_perms = this.command.client_perms
         const member_perms = this.command.member_perms
-        if (!(this.message.channel instanceof DMChannel) && (!client_perms.empty || !member_perms.empty)) {
+        if (this.message.channel.type !== 'DM' && (!client_perms.empty || !member_perms.empty)) {
 
             if (!client_perms.empty) {
                 const channel_perms = this.message.channel.permissionsFor(client.user)
@@ -171,7 +171,7 @@ class CommandHandler {
                         .setTitle('Боту не хватает следующих прав')
                         .setDescription('```\n' + channel_perms.missing(client_perms).map(v => tr(v)).join('\n') + '```')
 
-                    this.message.channel.send(Embed)
+                    this.message.channel.send({ embeds: [Embed] })
                     return false
                 }
             }
@@ -184,7 +184,7 @@ class CommandHandler {
                         .setTitle('Вам не хватает следующих прав')
                         .setDescription('```\n' + channel_perms.missing(member_perms).map(v => tr(v)).join('\n') + '```')
 
-                    this.message.channel.send(Embed)
+                    this.message.channel.send({ embeds: [Embed] })
                     return false
                 }
             }
@@ -193,14 +193,14 @@ class CommandHandler {
         if (this.command.owner_only && this.message.author.id !== client.owner) {
             const Embed = new MessageEmbed()
                 .setDescription('🚫 Данная команда доступна только создателю бота')
-            this.message.channel.send(Embed)
+            this.message.channel.send({ embeds: [Embed] })
             return false
         }
 
         if (this.command.guild_only && this.message.guild == null) {
             const Embed = new MessageEmbed()
                 .setDescription('🚫 Данная команда доступна только на сервере')
-            this.message.channel.send(Embed)
+            this.message.channel.send({ embeds: [Embed] })
             return false
         }
 
@@ -208,4 +208,4 @@ class CommandHandler {
     }
 }
 const handler = new CommandHandler()
-client.on('message', (message: Message) => handler.receive(message))
+client.on('messageCreate', (message: Message) => handler.receive(message))

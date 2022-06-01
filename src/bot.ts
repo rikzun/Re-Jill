@@ -1,5 +1,5 @@
 export { client }
-import { Client as OldClient, ClientOptions } from 'discord.js'
+import { Client as OldClient, ClientOptions, Intents } from 'discord.js'
 import { Command, ClientEvent } from './utils/classes'
 import { CLIENT_TOKEN, CLIENT_PREFIX, CLIENT_OWNER } from './config'
 import * as path from 'path'
@@ -51,7 +51,18 @@ class Client extends OldClient {
         this.login(CLIENT_TOKEN)
     }
 }
-const client = new Client()
+const client = new Client({
+    intents: [
+        'GUILDS',
+        'GUILD_MEMBERS',
+        'GUILD_EMOJIS_AND_STICKERS',
+        'GUILD_PRESENCES',
+        'GUILD_MESSAGES',
+        'GUILD_MESSAGE_REACTIONS',
+        'DIRECT_MESSAGES',
+        'DIRECT_MESSAGE_REACTIONS',
+    ]
+})
 client.init()
 
 client.on('ready', () => {

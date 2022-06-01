@@ -208,7 +208,7 @@ class Roll {
 }
 
 
-client.on('message', async (message: Message) => {
+client.on('messageCreate', async (message: Message) => {
     if (message.author.bot) return
     if (!regexpRoll.test(message.content)) return
 
@@ -231,8 +231,8 @@ client.on('message', async (message: Message) => {
 
     const Embed = new MessageEmbed()
         .setDescription(desc)
-        .setFooter(roll.text ?? '')
-        .setAuthor(author, message.author.displayAvatarURL({format: 'png', dynamic: true, size: 4096}))
+        .setFooter({ text: roll.text ?? '' })
+        .setAuthor({ name: author, iconURL: message.author.displayAvatarURL({format: 'png', dynamic: true, size: 4096}) })
     
-    await message.channel.send(Embed)
+    await message.channel.send({ embeds: [Embed] })
 })
