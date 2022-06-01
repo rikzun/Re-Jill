@@ -1,4 +1,4 @@
-import { Collection, Message, DMChannel } from 'discord.js'
+import { Collection, Message } from 'discord.js'
 import { Command, MessageEmbed, Command_Args, Command_Pars } from '../utils/classes'
 import { emoji_regex, unicode_emoji_regex, message_link } from '../utils/regex'
 import { emojis } from '../events/emoji_data'
@@ -166,16 +166,16 @@ const command_array = [
         private _choose(options: string[]): unknown {
             const Embed = new MessageEmbed()
                 .setTitle('Найдено несколько совпадений...')
-                .setDescription(options.map((v, i) => `\`${i + 1}\`\n${v}\n`))
-                .setFooter('В течении 20с отправьте номер варианта.')
+                .setDescription(options.map((v, i) => `\`${i + 1}\`\n${v}\n`).join('\n'))
+                .setFooter({ text: 'В течении 20с отправьте номер варианта.' })
 
             if (Embed.description.length >= 6000) return this.message.react('❌')
 
-            const sent_message = this.message.channel.send(Embed)
-            const collector = this.message.channel.createMessageCollector(
-                msg => msg.author.id == this.message.author.id, 
-                { time: 20000 }
-            )
+            const sent_message = this.message.channel.send({ embeds: [Embed] })
+            const collector = this.message.channel.createMessageCollector({
+                filter: msg => msg.author.id == this.message.author.id, 
+                time: 20000
+            })
             collector.on('collect', async (msg: Message) => {
                 const num = Number(msg.content)
                 if (Number.isNaN(num) || options.length < num || num < 1) return
@@ -187,7 +187,7 @@ const command_array = [
                     await (await sent_message).delete()
                 } catch (error) {}
 
-                if (this.message.channel instanceof DMChannel) return
+                if (this.message.channel.type === 'DM') return
                 if (this.message.channel.permissionsFor(this.message.client.user).has('MANAGE_MESSAGES')) {
                     await msg.delete()
                 }
@@ -249,12 +249,12 @@ const command_array = [
             if (text.replace(/\s/g, '') == '') {
                 const Embed = new MessageEmbed()
                     .setDescription('🚫 Указанные символы не поддерживаются.')
-                return this.message.channel.send(Embed)
+                return this.message.channel.send({ embeds: [Embed] })
             }
             if (text.length >= 2000) {
                 const Embed = new MessageEmbed()
                     .setDescription('🚫 Сообщение слишком большое.')
-                return this.message.channel.send(Embed)
+                return this.message.channel.send({ embeds: [Embed] })
             }
 
             await this.message.channel.send(text)
@@ -311,7 +311,7 @@ const command_array = [
             if (rt.empty) {
                 const Embed = new MessageEmbed()
                     .setDescription('🚫 Указанные символы не поддерживаются.')
-                return this.message.channel.send(Embed)
+                return this.message.channel.send({ embeds: [Embed] })
             }
 
             await this.message.channel.send(rt.join(''))

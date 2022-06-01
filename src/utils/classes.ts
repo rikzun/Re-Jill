@@ -168,7 +168,7 @@ abstract class Command {
                 .add(`  Бота:\n${this.client_perms.map(v => `\t${tr(v)}`).join(',\n')}\n`, !this.client_perms.empty)
                 .add(`  Пользователя:\n${this.member_perms.map(v => `\t${tr(v)}`).join(',\n')}\n`, !this.member_perms.empty)
                 .add('```').join('\n'))
-        message.channel.send(Embed)
+        message.channel.send({ embeds: [Embed] })
     }
 }
 
@@ -206,6 +206,6 @@ abstract class ClientEvent {
 
         const Embed = new MessageEmbed()
             .setDescription(desc.join('\n'))
-        message.channel.send(Embed)
+        message.channel.send({ embeds: [Embed] })
     }
 }

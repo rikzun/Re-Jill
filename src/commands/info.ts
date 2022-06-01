@@ -82,14 +82,14 @@ const commandArray = [
                         if (guild_array.empty) {
                             const Embed = new MessageEmbed()
                                 .setDescription('🚫 Не удалось найти гильдию.')
-                            return this.message.channel.send(Embed)
+                            return this.message.channel.send({ embeds: [Embed] })
                         }
 
                         if (this.message.channel instanceof DMChannel && guild_array[0] == undefined) return
 
                         if (guild_array.length == 1) {
                             if (guild_array[0] == undefined) guild_array[0] = this.message.guild
-                            this.target = guild_array[0].emojis.cache.array()
+                            this.target = Array.from(guild_array[0].emojis.cache.values())
                             this.matches = this.target.filter(v => v.name.includes(this.search_query))
                         } else {
                             return this._choose(args, pars, guild_array)
@@ -128,7 +128,7 @@ const commandArray = [
             }
 
             if (text) this.buffer.push(text)
-            const sent_message = await this.message.channel.send(this._content())
+            const sent_message = await this.message.channel.send({ embeds: [this._content()] })
 
             if (this.buffer.length > 1) {
                 await sent_message.react('⏮️')
@@ -136,16 +136,17 @@ const commandArray = [
                 await sent_message.react('⏩')
                 await sent_message.react('⏭️')
 
-                const collector = sent_message.createReactionCollector(
-                    (reaction, user) => user.id == this.message.author.id, 
-                    { time: 120000, dispose: true }
-                )
+                const collector = sent_message.createReactionCollector({
+                    filter: (reaction, user) => user.id == this.message.author.id,
+                    time: 120000,
+                    dispose: true,
+                })
 
                 collector.on('collect', async(reaction: MessageReaction) => this._page_move(sent_message, reaction))
                 collector.on('remove', async(reaction: MessageReaction) => this._page_move(sent_message, reaction))
                 collector.on('end', async(collected: Collection<string, Message>, reason: string) => {
                     if (reason !== 'time') return
-                    if (this.message.channel instanceof DMChannel) return
+                    if (this.message.channel.type === 'DM') return
                     if (this.message.channel.permissionsFor(this.message.client.user).has('MANAGE_MESSAGES')) {
                         await sent_message.reactions.removeAll()
                     }
@@ -161,14 +162,14 @@ const commandArray = [
         private _choose(args: Command_Args, pars: Command_Pars, guild_array: Guild[]): void {
             const Embed = new MessageEmbed()
                 .setTitle('Найдено несколько совпадений...')
-                .setDescription(guild_array.map((v, i) => `\`${i + 1}\` \`${v}\`\n`))
-                .setFooter('В течении 20с отправьте номер варианта.')
+                .setDescription(guild_array.map((v, i) => `\`${i + 1}\` \`${v}\`\n`).join('\n'))
+                .setFooter({ text: 'В течении 20с отправьте номер варианта.' })
 
-            const sent_message = this.message.channel.send(Embed)
-            const collector = this.message.channel.createMessageCollector(
-                msg => msg.author.id == this.message.author.id, 
-                { time: 20000 }
-            )
+            const sent_message = this.message.channel.send({ embeds: [Embed] })
+            const collector = this.message.channel.createMessageCollector({
+                filter: msg => msg.author.id == this.message.author.id,
+                time: 20000
+            })
             collector.on('collect', async (msg: Message) => {
                 const num = Number(msg.content)
                 if (Number.isNaN(num) || guild_array.length < num || num < 1) return
@@ -181,7 +182,7 @@ const commandArray = [
                     await (await sent_message).delete()
                 } catch (error) {}
 
-                if (this.message.channel instanceof DMChannel) return
+                if (this.message.channel.type === 'DM') return
                 if (!this.message.channel.permissionsFor(this.message.client.user).has('MANAGE_MESSAGES')) return
                 try {
                     await msg.delete()
@@ -202,7 +203,7 @@ const commandArray = [
                     if (this.page == 0) break
                     this.page = 0
 
-                    sent_message.edit(this._content())
+                    sent_message.edit({ embeds: [this._content()] })
                     break
                 }
 
@@ -210,7 +211,7 @@ const commandArray = [
                     if (this.page == 0) break
                     this.page--
 
-                    sent_message.edit(this._content())
+                    sent_message.edit({ embeds: [this._content()] })
                     break
                 }
                     
@@ -218,7 +219,7 @@ const commandArray = [
                     if (this.page + 1 == this.buffer.length) break
                     this.page++
 
-                    sent_message.edit(this._content())
+                    sent_message.edit({ embeds: [this._content()] })
                     break
                 }
 
@@ -226,7 +227,7 @@ const commandArray = [
                     if (this.page == this.buffer.length - 1) break
                     this.page = this.buffer.length - 1
 
-                    sent_message.edit(this._content())
+                    sent_message.edit({ embeds: [this._content()] })
                     break
                 }
             }
@@ -262,7 +263,7 @@ const commandArray = [
             if (this.members.empty) {
                 const Embed = new MessageEmbed()
                     .setDescription('🚫 Пользователь не найден')
-                return this.message.channel.send(Embed)
+                return this.message.channel.send({ embeds: [Embed] })
             }
                 
             if (this.members[0] == undefined) this.members = [this.message.member]
@@ -272,7 +273,7 @@ const commandArray = [
 
         private _sendMessage() {
             const member = this.members[0]
-            const presence = member.user.presence
+            const presence = member.presence
             const info: string[][] = []
         
             let platform = Object.keys(presence.clientStatus ?? []).map(e => tr(e))
@@ -288,7 +289,7 @@ const commandArray = [
 
             info[1] = []
             for (const activity of presence.activities) {
-                if (activity.type == 'CUSTOM_STATUS') {
+                if (activity.type == 'CUSTOM') {
                     if (!activity.state) continue
                     info[1].push(activity.state.replace(/```/g, ''))
                     continue
@@ -307,20 +308,20 @@ const commandArray = [
         
             if (!info[1].empty) Embed.addField('Активность', info[1].map(v => '```\n' + v + '```').join(''))
         
-            this.message.channel.send(Embed)
+            this.message.channel.send({ embeds: [Embed] })
         }
 
         private _choise(): void {
             const Embed = new MessageEmbed()
                 .setTitle('Найдено несколько совпадений...')
-                .setDescription(this.members.map((e, i) => `\`${i}\`: ` + e.toString()))
-                .setFooter('В течении 20с отправьте номер пользователя.')
-            this.message.channel.send(Embed)
+                .setDescription(this.members.map((e, i) => `\`${i}\`: ` + e.toString()).join('\n'))
+                .setFooter({ text: 'В течении 20с отправьте номер пользователя.' })
+            this.message.channel.send({ embeds: [Embed] })
         
-            const collector = this.message.channel.createMessageCollector(
-                msg => msg.author.id == this.message.author.id, 
-                { time: 20000 }
-            )
+            const collector = this.message.channel.createMessageCollector({
+                filter: msg => msg.author.id == this.message.author.id,
+                time: 20000
+            })
         
             collector.on('collect', async(message: Message) => {
                 const num = Number(message)
@@ -363,7 +364,7 @@ const commandArray = [
 
                 if (target.empty) {
                     const Embed = new MessageEmbed().setDescription('🚫 Нет совпадений.')
-                    return this.message.channel.send(Embed)
+                    return this.message.channel.send({ embeds: [Embed] })
                 }
 
                 return target[0].send_help(this.message)
@@ -377,7 +378,7 @@ const commandArray = [
             
             const Embed = new MessageEmbed()
                 .setDescription(array.join(''))
-            this.message.channel.send(Embed)
+            this.message.channel.send({ embeds: [Embed] })
         }
     },
     class HelpCommand extends Command {
@@ -410,7 +411,7 @@ const commandArray = [
                 
             const Embed = new MessageEmbed()
                 .setDescription(info.join('\n'))
-            return this.message.channel.send(Embed)
+            return this.message.channel.send({ embeds: [Embed] })
         }
     },
     class OsuCommand extends Command {
@@ -477,7 +478,7 @@ const commandArray = [
             } catch (error) {
                 const Embed = new MessageEmbed()
                     .setDescription('🚫 Пользователь не найден')
-                return this.message.channel.send(Embed)
+                return this.message.channel.send({ embeds: [Embed] })
             }
 
             const [int, fl] = String(data.statistics.hit_accuracy).split('.')
@@ -519,7 +520,7 @@ const commandArray = [
 
             const Embed = new MessageEmbed()
                 .setThumbnail(data.avatar_url)
-                .setAuthor(data.username, `https://osu.ppy.sh/images/flags/${data.country_code}.png`, `https://osu.ppy.sh/users/${data.id}`)
+                .setAuthor({ name: data.username, iconURL: `https://osu.ppy.sh/images/flags/${data.country_code}.png`, url: `https://osu.ppy.sh/users/${data.id}` })
                 .addFields(
                     {
                         name: 'Статистика',
@@ -536,9 +537,9 @@ const commandArray = [
                         value: '```\n' + info[2].join('\n') + '```'
                     }
                 )
-                .setFooter(`Режим игры ${this.mode}`)
+                .setFooter({ text: `Режим игры ${this.mode}` })
 
-            return this.message.channel.send(Embed)
+            return this.message.channel.send({ embeds: [Embed] })
         }
 
         async create_token() {
