@@ -1,5 +1,5 @@
-import { DMChannel, Message } from 'discord.js'
-import { MessageEmbed, Argument, Command, Command_Args, Command_Pars } from '../utils/classes'
+import { Message } from 'discord.js'
+import { EmbedBuilder, Argument, Command, Command_Args, Command_Pars } from '../utils/classes'
 import { member_mention, member_username_hash } from '../utils/regex'
 import { tr } from '../utils/translate'
 import { client } from '../bot'
@@ -59,8 +59,8 @@ class CommandHandler {
                     return this.command.send_help(this.message)
                 }
                 case '--delete': {
-                    if (this.message.channel.type === 'DM') break
-                    if (!this.message.channel.permissionsFor(message.client.user).has('MANAGE_MESSAGES')) break
+                    if (this.message.channel.isDMBased()) break
+                    if (!this.message.channel.permissionsFor(message.client.user).has('ManageMessages')) break
                     await wait(100)
                     await message.delete()
                     break
@@ -90,14 +90,14 @@ class CommandHandler {
     async arg_handler(argument: Argument, value: string, index: number) {
         if (!value && argument.value !== undefined && isFinite(index)) return argument.value
         if (!value && argument.required) {
-            const Embed = new MessageEmbed()
+            const Embed = new EmbedBuilder()
                 .setDescription(`🚫 Вы пропустили обязательный аргумент \`${argument.name}\``)
             this.message.channel.send({ embeds: [Embed] })
             
             throw new Error()
         }
         if (argument.values_array && !argument.values_array.includes(value)) {
-            const Embed = new MessageEmbed()
+            const Embed = new EmbedBuilder()
                 .setDescription(`🚫 Аргументу \`${argument.name}\` передано неверное значение`)
             this.message.channel.send({ embeds: [Embed] })
             
@@ -161,13 +161,13 @@ class CommandHandler {
     async check_requirements() {
         const client_perms = this.command.client_perms
         const member_perms = this.command.member_perms
-        if (this.message.channel.type !== 'DM' && (!client_perms.empty || !member_perms.empty)) {
+        if (!this.message.channel.isDMBased() && (!client_perms.empty || !member_perms.empty)) {
 
             if (!client_perms.empty) {
                 const channel_perms = this.message.channel.permissionsFor(client.user)
 
                 if (!channel_perms.has(client_perms)) {
-                    const Embed = new MessageEmbed()
+                    const Embed = new EmbedBuilder()
                         .setTitle('Боту не хватает следующих прав')
                         .setDescription('```\n' + channel_perms.missing(client_perms).map(v => tr(v)).join('\n') + '```')
 
@@ -180,7 +180,7 @@ class CommandHandler {
                 const channel_perms = this.message.channel.permissionsFor(this.message.member)
 
                 if (!channel_perms.has(member_perms)) {
-                    const Embed = new MessageEmbed()
+                    const Embed = new EmbedBuilder()
                         .setTitle('Вам не хватает следующих прав')
                         .setDescription('```\n' + channel_perms.missing(member_perms).map(v => tr(v)).join('\n') + '```')
 
@@ -191,14 +191,14 @@ class CommandHandler {
         }
 
         if (this.command.owner_only && this.message.author.id !== client.owner) {
-            const Embed = new MessageEmbed()
+            const Embed = new EmbedBuilder()
                 .setDescription('🚫 Данная команда доступна только создателю бота')
             this.message.channel.send({ embeds: [Embed] })
             return false
         }
 
         if (this.command.guild_only && this.message.guild == null) {
-            const Embed = new MessageEmbed()
+            const Embed = new EmbedBuilder()
                 .setDescription('🚫 Данная команда доступна только на сервере')
             this.message.channel.send({ embeds: [Embed] })
             return false

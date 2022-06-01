@@ -1,7 +1,7 @@
-import { PermissionString, MessageEmbed as OldMessageEmbed, Message } from 'discord.js'
+import { EmbedBuilder as OldEmbedBuilder, Message, EmbedData, APIEmbed, PermissionFlagsBits } from 'discord.js'
 import { tr } from './translate'
 export { 
-    Command, CommandOptions, MessageEmbed, Command_Args, 
+    Command, CommandOptions, EmbedBuilder, Command_Args, 
     Command_Pars, Constructors, Argument, ClientEvent
 }
 
@@ -75,6 +75,8 @@ class Parameter {
 interface Command_Args { [arg_name: string]: unknown }
 interface Command_Pars { [par_name: string]: Command_Args }
 
+type PermissionString = keyof typeof PermissionFlagsBits;
+
 interface CommandOptions {
     names: string[]
     description?: string
@@ -109,8 +111,8 @@ abstract class Command {
         this.description = options.description ?? 'отсутствует'
         this.additional = options.additional
 
-        this.client_perms = ['SEND_MESSAGES', 'VIEW_CHANNEL', ...options.client_perms ?? []]
-        this.member_perms = ['SEND_MESSAGES', 'VIEW_CHANNEL', ...options.member_perms ?? []]
+        this.client_perms = ['SendMessages', 'ViewChannel', ...options.client_perms ?? []]
+        this.member_perms = ['SendMessages', 'ViewChannel', ...options.member_perms ?? []]
 
         this.owner_only = options.owner_only ?? false
         this.guild_only = options.guild_only ?? false
@@ -156,7 +158,7 @@ abstract class Command {
             return rt.split('\n').join('\n  ')
         }
 
-        const Embed = new MessageEmbed()
+        const Embed = new EmbedBuilder()
             .setDescription([]
                 .add('```autohotkey')
                 .add(`Имена команды: ` + this.names.join(', '))
@@ -172,10 +174,14 @@ abstract class Command {
     }
 }
 
-class MessageEmbed extends OldMessageEmbed {
-    constructor() {
-        super()
-        this.color = 3092790
+class EmbedBuilder extends OldEmbedBuilder {
+    constructor(data?: EmbedData | APIEmbed) {
+        super(data)
+        this.setColor('#2f3136')
+    }
+
+    public addField(name: string, value: string, inline: boolean = false): this {
+        return this.addFields([{ name, value, inline }]);
     }
 }
 
@@ -204,7 +210,7 @@ abstract class ClientEvent {
             .add(`Дополнительно: ${this.additional}\n`, Boolean(this.additional))
             .add('```')
 
-        const Embed = new MessageEmbed()
+        const Embed = new EmbedBuilder()
             .setDescription(desc.join('\n'))
         message.channel.send({ embeds: [Embed] })
     }
