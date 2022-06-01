@@ -1,7 +1,7 @@
 import { client } from '../bot'
 import { Message } from 'discord.js'
 import { randint } from '../utils/functions'
-import { MessageEmbed, ClientEvent } from '../utils/classes'
+import { EmbedBuilder, ClientEvent } from '../utils/classes'
 
 const regexpRoll = /^(?:(\d*)?d(\d*))(?: ?\((\d*)\))?((?: ?=?[+\-*\/] ?(?:(?:\d*)?d?(?:\d*.?\d+)))*)(?: ?_(>|>=|=|<=|<)(\d*\.?\d+))?(?: ([\s\S]*))?$/
 const regexpMod = /(=?[+\-*\/])(?:(?:(\d*)d)?(\d*\.?\d+)?)/g
@@ -229,10 +229,10 @@ client.on('messageCreate', async (message: Message) => {
     if (desc.length > 2048) desc = desc.slice(0, 2042) + '...```'
     if (author.length > 256) author = author.slice(0, 253) + '...'
 
-    const Embed = new MessageEmbed()
+    const Embed = new EmbedBuilder()
         .setDescription(desc)
         .setFooter({ text: roll.text ?? '' })
-        .setAuthor({ name: author, iconURL: message.author.displayAvatarURL({format: 'png', dynamic: true, size: 4096}) })
+        .setAuthor({ name: author, iconURL: message.author.displayAvatarURL({extension: 'png', size: 4096}) })
     
     await message.channel.send({ embeds: [Embed] })
 })

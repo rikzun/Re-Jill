@@ -1,5 +1,5 @@
 export { client }
-import { Client as OldClient, ClientOptions, Intents } from 'discord.js'
+import { ActivityType, Client as OldClient, ClientOptions } from 'discord.js'
 import { Command, ClientEvent } from './utils/classes'
 import { CLIENT_TOKEN, CLIENT_PREFIX, CLIENT_OWNER } from './config'
 import * as path from 'path'
@@ -53,20 +53,21 @@ class Client extends OldClient {
 }
 const client = new Client({
     intents: [
-        'GUILDS',
-        'GUILD_MEMBERS',
-        'GUILD_EMOJIS_AND_STICKERS',
-        'GUILD_PRESENCES',
-        'GUILD_MESSAGES',
-        'GUILD_MESSAGE_REACTIONS',
-        'DIRECT_MESSAGES',
-        'DIRECT_MESSAGE_REACTIONS',
+        'Guilds',
+        'GuildMembers',
+        'GuildEmojisAndStickers',
+        'GuildPresences',
+        'GuildMessages',
+        'GuildMessageReactions',
+        'DirectMessages',
+        'DirectMessageReactions',
+        'MessageContent',
     ]
 })
 client.init()
 
 client.on('ready', () => {
-    client.user.setActivity(`${client.prefix}help`, {type: 'WATCHING'})
+    client.user.setActivity(`${client.prefix}help`, {type: ActivityType.Watching})
     console.log(true)
 })
 

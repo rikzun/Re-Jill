@@ -1,5 +1,5 @@
-import { Collection, Message, MessageReaction, DMChannel, GuildEmoji, Guild, GuildMember } from 'discord.js'
-import { Command, MessageEmbed, Command_Args, Command_Pars } from '../utils/classes'
+import { Collection, Message, MessageReaction, GuildEmoji, Guild, GuildMember, ActivityType } from 'discord.js'
+import { Command, EmbedBuilder, Command_Args, Command_Pars } from '../utils/classes'
 import { OSU_SECRET, OSU_ID } from '../config'
 import { strftime } from '../utils/functions'
 import { tr } from '../utils/translate'
@@ -24,7 +24,7 @@ const commandArray = [
                 additional: 'В случае отсутствия аргумента выводит список всех доступных эмодзи.\n' +
                 'Без использования дополнительных параметров осуществляется вложенный поиск, а так же игнорируется регистр.\n' +
                 '(например при поиске "yes" найдутся "Yes" и "ohYes")',
-                client_perms: ['EMBED_LINKS', 'USE_EXTERNAL_EMOJIS'],
+                client_perms: ['EmbedLinks', 'UseExternalEmojis'],
                 args: [
                     {
                         name: 'search_query',
@@ -80,12 +80,12 @@ const commandArray = [
                         const guild_array = par_args.guild_array as Guild[]
 
                         if (guild_array.empty) {
-                            const Embed = new MessageEmbed()
+                            const Embed = new EmbedBuilder()
                                 .setDescription('🚫 Не удалось найти гильдию.')
                             return this.message.channel.send({ embeds: [Embed] })
                         }
 
-                        if (this.message.channel instanceof DMChannel && guild_array[0] == undefined) return
+                        if (this.message.channel.isDMBased() && guild_array[0] == undefined) return
 
                         if (guild_array.length == 1) {
                             if (guild_array[0] == undefined) guild_array[0] = this.message.guild
@@ -146,21 +146,21 @@ const commandArray = [
                 collector.on('remove', async(reaction: MessageReaction) => this._page_move(sent_message, reaction))
                 collector.on('end', async(collected: Collection<string, Message>, reason: string) => {
                     if (reason !== 'time') return
-                    if (this.message.channel.type === 'DM') return
-                    if (this.message.channel.permissionsFor(this.message.client.user).has('MANAGE_MESSAGES')) {
+                    if (this.message.channel.isDMBased()) return
+                    if (this.message.channel.permissionsFor(this.message.client.user).has('ManageMessages')) {
                         await sent_message.reactions.removeAll()
                     }
                 })
             }
         }
-        private _content(): MessageEmbed {
-            return new MessageEmbed()
+        private _content(): EmbedBuilder {
+            return new EmbedBuilder()
                 .setTitle(`Страница ${this.buffer.length !== 0? this.page + 1 : 0}/${this.buffer.length} Всего эмодзи ${this.target.length}`)
                 .setDescription(this.buffer[this.page] ?? 'пусто')
         }
 
         private _choose(args: Command_Args, pars: Command_Pars, guild_array: Guild[]): void {
-            const Embed = new MessageEmbed()
+            const Embed = new EmbedBuilder()
                 .setTitle('Найдено несколько совпадений...')
                 .setDescription(guild_array.map((v, i) => `\`${i + 1}\` \`${v}\`\n`).join('\n'))
                 .setFooter({ text: 'В течении 20с отправьте номер варианта.' })
@@ -182,8 +182,8 @@ const commandArray = [
                     await (await sent_message).delete()
                 } catch (error) {}
 
-                if (this.message.channel.type === 'DM') return
-                if (!this.message.channel.permissionsFor(this.message.client.user).has('MANAGE_MESSAGES')) return
+                if (this.message.channel.isDMBased()) return
+                if (!this.message.channel.permissionsFor(this.message.client.user).has('ManageMessages')) return
                 try {
                     await msg.delete()
                 } catch(error) {}
@@ -242,7 +242,7 @@ const commandArray = [
                 names: ['user'],
                 description: 'Выводит информацию о пользователе.',
                 additional: 'В случае отсутствия аргумента выводит информацию о вас.',
-                client_perms: ['EMBED_LINKS'],
+                client_perms: ['EmbedLinks'],
                 guild_only: true,
                 args: [
                     {
@@ -261,7 +261,7 @@ const commandArray = [
             this.members = args.user as GuildMember[]
 
             if (this.members.empty) {
-                const Embed = new MessageEmbed()
+                const Embed = new EmbedBuilder()
                     .setDescription('🚫 Пользователь не найден')
                 return this.message.channel.send({ embeds: [Embed] })
             }
@@ -289,21 +289,21 @@ const commandArray = [
 
             info[1] = []
             for (const activity of presence.activities) {
-                if (activity.type == 'CUSTOM') {
+                if (activity.type == ActivityType.Custom) {
                     if (!activity.state) continue
                     info[1].push(activity.state.replace(/```/g, ''))
                     continue
                 }
         
                 const activityForm = []
-                    .add(tr(activity.type) + ' ' + activity.name)
+                    .add(tr(ActivityType[activity.type]) + ' ' + activity.name)
                     .add(activity.details, activity.details)
                     .add(activity.state, activity.state)
                 info[1].push(activityForm.join('\n'))
             }
         
-            const Embed = new MessageEmbed()
-                .setThumbnail(member.user.displayAvatarURL({format: 'png', dynamic: true, size: 4096}))
+            const Embed = new EmbedBuilder()
+                .setThumbnail(member.user.displayAvatarURL({extension: 'png', size: 4096}))
                 .addField('Общее', '```\n' + info[0].join('\n') + '```')
         
             if (!info[1].empty) Embed.addField('Активность', info[1].map(v => '```\n' + v + '```').join(''))
@@ -312,7 +312,7 @@ const commandArray = [
         }
 
         private _choise(): void {
-            const Embed = new MessageEmbed()
+            const Embed = new EmbedBuilder()
                 .setTitle('Найдено несколько совпадений...')
                 .setDescription(this.members.map((e, i) => `\`${i}\`: ` + e.toString()).join('\n'))
                 .setFooter({ text: 'В течении 20с отправьте номер пользователя.' })
@@ -342,7 +342,7 @@ const commandArray = [
                 names: ['manual'],
                 description: 'Вызывает сообщение содержащее все команды и ивенты.',
                 additional: 'В случае передачи аргумента выводит его справочную информацию.',
-                client_perms: ['EMBED_LINKS'],
+                client_perms: ['EmbedLinks'],
                 args: [
                     {
                         name: 'name',
@@ -363,7 +363,7 @@ const commandArray = [
                 target.push(...client.events.filter(v => v.name == this.name))
 
                 if (target.empty) {
-                    const Embed = new MessageEmbed().setDescription('🚫 Нет совпадений.')
+                    const Embed = new EmbedBuilder().setDescription('🚫 Нет совпадений.')
                     return this.message.channel.send({ embeds: [Embed] })
                 }
 
@@ -376,7 +376,7 @@ const commandArray = [
                 client.events.map(v => '```autohotkey\n' + `Ивент: ${v.name}\nОписание: ${v.description}` + '```').join('')
             ]
             
-            const Embed = new MessageEmbed()
+            const Embed = new EmbedBuilder()
                 .setDescription(array.join(''))
             this.message.channel.send({ embeds: [Embed] })
         }
@@ -388,7 +388,7 @@ const commandArray = [
             super({
                 names: ['help'],
                 description: 'Выводит справочную информацию об использованию бота.',
-                client_perms: ['EMBED_LINKS']
+                client_perms: ['EmbedLinks']
             })
         }
 
@@ -409,7 +409,7 @@ const commandArray = [
                 '```'
             ]
                 
-            const Embed = new MessageEmbed()
+            const Embed = new EmbedBuilder()
                 .setDescription(info.join('\n'))
             return this.message.channel.send({ embeds: [Embed] })
         }
@@ -426,7 +426,7 @@ const commandArray = [
             super({
                 names: ['osu'],
                 description: 'Отображение информации из профиля в игре osu.',
-                client_perms: ['EMBED_LINKS'],
+                client_perms: ['EmbedLinks'],
                 args: [
                     {
                         name: 'username',
@@ -476,7 +476,7 @@ const commandArray = [
                     }
                 })).data
             } catch (error) {
-                const Embed = new MessageEmbed()
+                const Embed = new EmbedBuilder()
                     .setDescription('🚫 Пользователь не найден')
                 return this.message.channel.send({ embeds: [Embed] })
             }
@@ -518,10 +518,10 @@ const commandArray = [
                 'Последний визит: ' + strftime(data.last_visit, '%d.%m.%y %H:%M:%S')
             ]
 
-            const Embed = new MessageEmbed()
+            const Embed = new EmbedBuilder()
                 .setThumbnail(data.avatar_url)
                 .setAuthor({ name: data.username, iconURL: `https://osu.ppy.sh/images/flags/${data.country_code}.png`, url: `https://osu.ppy.sh/users/${data.id}` })
-                .addFields(
+                .addFields([
                     {
                         name: 'Статистика',
                         inline: true,
@@ -536,7 +536,7 @@ const commandArray = [
                         name: 'Общая информация',
                         value: '```\n' + info[2].join('\n') + '```'
                     }
-                )
+                ])
                 .setFooter({ text: `Режим игры ${this.mode}` })
 
             return this.message.channel.send({ embeds: [Embed] })

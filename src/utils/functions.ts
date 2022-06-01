@@ -1,4 +1,4 @@
-import { DMChannel, Message, TextChannel } from "discord.js"
+import { Message } from "discord.js"
 import { client } from '../bot'
 import { message_link } from "./regex"
 export { wait, randint, strftime, fetchMessageLink }
@@ -43,7 +43,7 @@ async function fetchMessageLink(link: string): Promise<Message> {
     if (!guild) return
 
     const channel = guild.channels.cache.get(match[2])
-    if (!channel || (!(channel instanceof TextChannel) && !(channel instanceof DMChannel))) return
+    if (!channel || !channel.isTextBased()) return
 
     return await channel.messages.fetch(match[3])
 }

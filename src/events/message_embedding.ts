@@ -1,8 +1,8 @@
 import { client } from '../bot'
-import { Message, TextChannel, MessagePayload } from 'discord.js'
-import { MessageEmbed, ClientEvent } from '../utils/classes'
+import { Message, MessagePayload } from 'discord.js'
+import { EmbedBuilder, ClientEvent } from '../utils/classes'
 
-export default class MessageEmbeddingEvent extends ClientEvent {
+export default class EmbedBuilderdingEvent extends ClientEvent {
     constructor() {
         super({
             name: 'message_embedding',
@@ -24,15 +24,16 @@ client.on('messageCreate', async (message: Message) => {
     if (char || message.content.startsWith(client.prefix)) return
 
     try {
-        const channel = client.guilds.cache.get(guildID).channels.cache.get(channelID) as TextChannel
+        const channel = client.guilds.cache.get(guildID).channels.cache.get(channelID)
+        if (!channel.isTextBased()) return
         const link_message = await channel.messages.fetch(messageID)
 
         const content = link_message.content
         const files = Array.from(link_message.attachments.values())
-        const embeds = Array.from(link_message.embeds.filter(v => v.type == 'rich'))
+        const embeds = Array.from(link_message.embeds.filter(v => v.data.type == 'rich'))
 
         if (!content && files.empty && embeds.empty) {
-            const Embed = new MessageEmbed()
+            const Embed = new EmbedBuilder()
                 .setDescription('🚫 Сообщение пустое.')
             message.channel.send({ embeds: [Embed] })
             return
@@ -45,10 +46,10 @@ client.on('messageCreate', async (message: Message) => {
             embeds
         })
 
-        const infoEmbed = new MessageEmbed()
+        const infoEmbed = new EmbedBuilder()
             .setAuthor({
                 name: link_message.author.username,
-                iconURL: link_message.author.displayAvatarURL({format: 'png', dynamic: true, size: 4096})
+                iconURL: link_message.author.displayAvatarURL({extension: 'png', size: 4096})
             })
             .setTimestamp(link_message.createdTimestamp)
             .setDescription(`[ссылка](https://discord.com/channels/${guildID}/${channelID}/${messageID})`)

@@ -1,5 +1,5 @@
 import { Collection, Message } from 'discord.js'
-import { Command, MessageEmbed, Command_Args, Command_Pars } from '../utils/classes'
+import { Command, EmbedBuilder, Command_Args, Command_Pars } from '../utils/classes'
 import { emoji_regex, unicode_emoji_regex, message_link } from '../utils/regex'
 import { emojis } from '../events/emoji_data'
 import { fetchMessageLink } from '../utils/functions'
@@ -49,7 +49,7 @@ const command_array = [
                         description: 'Не игнорировать регистр при поиске.'
                     }
                 ],
-                client_perms: ['USE_EXTERNAL_EMOJIS']
+                client_perms: ['UseExternalEmojis']
             })
         }
 
@@ -164,12 +164,12 @@ const command_array = [
         }
 
         private _choose(options: string[]): unknown {
-            const Embed = new MessageEmbed()
+            const Embed = new EmbedBuilder()
                 .setTitle('Найдено несколько совпадений...')
                 .setDescription(options.map((v, i) => `\`${i + 1}\`\n${v}\n`).join('\n'))
                 .setFooter({ text: 'В течении 20с отправьте номер варианта.' })
 
-            if (Embed.description.length >= 6000) return this.message.react('❌')
+            if (Embed.data.description.length >= 6000) return this.message.react('❌')
 
             const sent_message = this.message.channel.send({ embeds: [Embed] })
             const collector = this.message.channel.createMessageCollector({
@@ -187,8 +187,8 @@ const command_array = [
                     await (await sent_message).delete()
                 } catch (error) {}
 
-                if (this.message.channel.type === 'DM') return
-                if (this.message.channel.permissionsFor(this.message.client.user).has('MANAGE_MESSAGES')) {
+                if (this.message.channel.isDMBased()) return
+                if (this.message.channel.permissionsFor(this.message.client.user).has('ManageMessages')) {
                     await msg.delete()
                 }
             })
@@ -247,12 +247,12 @@ const command_array = [
             const text = rt.join(' ').replace(/\n\s/g, '\n')
 
             if (text.replace(/\s/g, '') == '') {
-                const Embed = new MessageEmbed()
+                const Embed = new EmbedBuilder()
                     .setDescription('🚫 Указанные символы не поддерживаются.')
                 return this.message.channel.send({ embeds: [Embed] })
             }
             if (text.length >= 2000) {
-                const Embed = new MessageEmbed()
+                const Embed = new EmbedBuilder()
                     .setDescription('🚫 Сообщение слишком большое.')
                 return this.message.channel.send({ embeds: [Embed] })
             }
@@ -309,7 +309,7 @@ const command_array = [
 
             const rt = this.text.map(v => this.dictionary.hasOwnProperty(v) ? this.dictionary[v] : v)
             if (rt.empty) {
-                const Embed = new MessageEmbed()
+                const Embed = new EmbedBuilder()
                     .setDescription('🚫 Указанные символы не поддерживаются.')
                 return this.message.channel.send({ embeds: [Embed] })
             }
